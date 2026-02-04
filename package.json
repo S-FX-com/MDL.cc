@@ -1,0 +1,29 @@
+{
+  "name": "mdl-cc",
+  "version": "1.0.0",
+  "description": "MDL.cc - The middle-point URL shortening service",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:worker\" \"npm run dev:web\"",
+    "dev:worker": "wrangler dev",
+    "dev:web": "npm run dev --workspace=web",
+    "build": "npm run build:web && npm run build:worker",
+    "build:worker": "wrangler deploy --dry-run",
+    "build:web": "npm run build --workspace=web",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 execute mdl-db --file=./migrations/schema.sql",
+    "db:migrate:local": "wrangler d1 execute mdl-db --local --file=./migrations/schema.sql"
+  },
+  "workspaces": [
+    "web"
+  ],
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240117.0",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3",
+    "wrangler": "^3.24.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
