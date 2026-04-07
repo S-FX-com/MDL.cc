@@ -15,6 +15,7 @@ import {
   Users,
   Download,
 } from 'lucide-react';
+import QRCodeDisplay, { useQRDownload } from '../components/QRCodeDisplay';
 import { links, Link as LinkType, AnalyticsData } from '../lib/api';
 import { format, parseISO } from 'date-fns';
 import {
@@ -44,6 +45,7 @@ export default function LinkDetail() {
   const [editTitle, setEditTitle] = useState('');
   const [editUrl, setEditUrl] = useState('');
   const [saving, setSaving] = useState(false);
+  const { ref: qrRef, download: downloadQRSvg } = useQRDownload(`mdl-cc-${id}.svg`);
 
   useEffect(() => {
     if (id) {
@@ -98,11 +100,6 @@ export default function LinkDetail() {
     setSaving(false);
   };
 
-  const downloadQR = () => {
-    if (link) {
-      window.open(`/api/qr?code=${link.short_code}&size=512`, '_blank');
-    }
-  };
 
   if (loading) {
     return (
@@ -391,14 +388,10 @@ export default function LinkDetail() {
               <QrCode className="w-5 h-5 text-dark-400" />
               QR Code
             </h3>
-            <div className="bg-white p-4 rounded-lg flex items-center justify-center">
-              <img
-                src={`/api/qr?code=${link.short_code}&size=200`}
-                alt="QR Code"
-                className="w-48 h-48"
-              />
+            <div ref={qrRef} className="bg-white p-4 rounded-lg flex items-center justify-center">
+              <QRCodeDisplay value={`https://mdl.cc/${link.short_code}`} size={192} />
             </div>
-            <button onClick={downloadQR} className="btn btn-secondary w-full mt-4">
+            <button onClick={downloadQRSvg} className="btn btn-secondary w-full mt-4">
               <Download className="w-4 h-4" />
               Download QR
             </button>

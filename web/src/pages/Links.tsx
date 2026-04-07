@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Plus,
@@ -12,11 +12,11 @@ import {
   QrCode,
   Filter,
   Check,
+  Link2,
 } from 'lucide-react';
 import { links, Link as LinkType, LinksResponse, groups as groupsApi, LinkGroup } from '../lib/api';
 import { format, parseISO } from 'date-fns';
 import CreateLinkModal from '../components/CreateLinkModal';
-import clsx from 'clsx';
 
 export default function Links() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -28,6 +28,8 @@ export default function Links() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
+  const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const page = parseInt(searchParams.get('page') || '1');
 
@@ -94,6 +96,19 @@ export default function Links() {
     await links.delete(linkId);
     loadLinks();
     setActiveMenu(null);
+  };
+
+  const openMenu = (linkId: string) => {
+    if (activeMenu === linkId) {
+      setActiveMenu(null);
+      return;
+    }
+    const btn = menuButtonRefs.current[linkId];
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    }
+    setActiveMenu(linkId);
   };
 
   return (
@@ -252,39 +267,13 @@ export default function Links() {
                           >
                             <QrCode className="w-4 h-4 text-dark-500" />
                           </a>
-                          <div className="relative">
-                            <button
-                              onClick={() => setActiveMenu(activeMenu === link.id ? null : link.id)}
-                              className="p-2 rounded hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
-                            >
-                              <MoreHorizontal className="w-4 h-4 text-dark-500" />
-                            </button>
-                            {activeMenu === link.id && (
-                              <>
-                                <div
-                                  className="fixed inset-0 z-10"
-                                  onClick={() => setActiveMenu(null)}
-                                />
-                                <div className="absolute right-0 top-full mt-1 z-20 w-40 py-1 card shadow-lg">
-                                  <Link
-                                    to={`/links/${link.id}`}
-                                    className="flex items-center gap-2 px-4 py-2 text-sm text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-700"
-                                    onClick={() => setActiveMenu(null)}
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                    Edit
-                                  </Link>
-                                  <button
-                                    onClick={() => deleteLink(link.id)}
-                                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-dark-100 dark:hover:bg-dark-700"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                    Delete
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </div>
+                          <button
+                            ref={(el) => { menuButtonRefs.current[link.id] = el; }}
+                            onClick={() => openMenu(link.id)}
+                            className="p-2 rounded hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
+                          >
+                            <MoreHorizontal className="w-4 h-4 text-dark-500" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -332,7 +321,7 @@ export default function Links() {
         ) : (
           <div className="flex flex-col items-center justify-center py-16">
             <div className="w-16 h-16 rounded-full bg-dark-100 dark:bg-dark-800 flex items-center justify-center mb-4">
-              <Link as any className="w-8 h-8 text-dark-400" />
+              <Link2 className="w-8 h-8 text-dark-400" />
             </div>
             <h3 className="font-medium text-dark-900 dark:text-white mb-1">No links found</h3>
             <p className="text-dark-500 dark:text-dark-400 mb-4">
@@ -352,6 +341,33 @@ export default function Links() {
         onClose={() => setCreateModalOpen(false)}
         onSuccess={() => loadLinks()}
       />
+
+      {/* Three-dot dropdown — rendered at the root level (fixed) to escape overflow:hidden */}
+      {activeMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setActiveMenu(null)} />
+          <div
+            className="fixed z-50 w-40 py-1 card shadow-xl"
+            style={{ top: menuPos.top, right: menuPos.right }}
+          >
+            <Link
+              to={`/links/${activeMenu}`}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-700"
+              onClick={() => setActiveMenu(null)}
+            >
+              <Edit className="w-4 h-4" />
+              Edit
+            </Link>
+            <button
+              onClick={() => deleteLink(activeMenu)}
+              className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-dark-100 dark:hover:bg-dark-700"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

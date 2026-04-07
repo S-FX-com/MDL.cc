@@ -28,6 +28,7 @@ export default function Layout() {
   const { theme, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [topBarUrl, setTopBarUrl] = useState('');
 
   return (
     <div className="min-h-screen bg-dark-50 dark:bg-dark-950">
@@ -138,16 +139,18 @@ export default function Layout() {
               <div className="relative w-full">
                 <input
                   type="text"
+                  value={topBarUrl}
+                  onChange={(e) => setTopBarUrl(e.target.value)}
                   placeholder="Paste your long URL here..."
-                  className="input pr-32"
+                  className="input pr-24"
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && e.currentTarget.value) {
+                    if (e.key === 'Enter' && topBarUrl.trim()) {
                       setCreateModalOpen(true);
                     }
                   }}
                 />
                 <button
-                  onClick={() => setCreateModalOpen(true)}
+                  onClick={() => { if (topBarUrl.trim()) setCreateModalOpen(true); }}
                   className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-primary btn-sm"
                 >
                   Shorten
@@ -178,7 +181,11 @@ export default function Layout() {
       </div>
 
       {/* Create Link Modal */}
-      <CreateLinkModal open={createModalOpen} onClose={() => setCreateModalOpen(false)} />
+      <CreateLinkModal
+        open={createModalOpen}
+        onClose={() => { setCreateModalOpen(false); setTopBarUrl(''); }}
+        initialUrl={topBarUrl}
+      />
     </div>
   );
 }
