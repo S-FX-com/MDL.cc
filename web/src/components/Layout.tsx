@@ -1,5 +1,5 @@
-import { Outlet, NavLink } from 'react-router-dom';
-import { useState } from 'react';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard,
   Link2,
@@ -12,6 +12,8 @@ import {
   X,
   Plus,
   Users,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -29,10 +31,43 @@ const navigation = [
 
 export default function Layout() {
   const { theme, toggleTheme } = useTheme();
-  const { activeWorkspace } = useWorkspace();
+  const { activeWorkspace, workspaces, setActiveWorkspaceId } = useWorkspace();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen]   = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [topBarUrl, setTopBarUrl]       = useState('');
+  const [wsSwitcherOpen, setWsSwitcherOpen] = useState(false);
+  const wsSwitcherRef = useRef<HTMLDivElement>(null);
+
+  // Display name from localStorage (set in Settings page)
+  const [displayName, setDisplayName] = useState(() =>
+    localStorage.getItem('mdl-display-name') || 'User'
+  );
+
+  // Keep display name in sync if Settings page updates it
+  useEffect(() => {
+    const handleStorage = () => {
+      setDisplayName(localStorage.getItem('mdl-display-name') || 'User');
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  // Close workspace switcher when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (wsSwitcherRef.current && !wsSwitcherRef.current.contains(e.target as Node)) {
+        setWsSwitcherOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const switchWorkspace = (id: string) => {
+    setActiveWorkspaceId(id);
+    setWsSwitcherOpen(false);
+  };
 
   return (
     <div className="min-h-screen" style={{ background: theme === 'dark' ? '#181e25' : '#ffffff' }}>
@@ -60,7 +95,6 @@ export default function Layout() {
         {/* Logo */}
         <div className="flex items-center justify-between h-16 px-5" style={{ borderBottom: theme === 'dark' ? '1px solid #2d3748' : '1px solid #f2f3f5' }}>
           <NavLink to="/" className="flex items-center gap-2.5 select-none">
-            {/* Brand mark — blue pill with link icon */}
             <div
               className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
               style={{ background: '#1456f0' }}
@@ -101,6 +135,93 @@ export default function Layout() {
           </button>
         </div>
 
+        {/* ── Workspace switcher (above Dashboard) ─────────────────────────── */}
+        <div className="px-3 pb-2" ref={wsSwitcherRef}>
+          <div className="relative">
+            <button
+              onClick={() => setWsSwitcherOpen((v) => !v)}
+              className="flex items-center gap-2 w-full px-3 py-2 rounded-xl transition-colors text-left"
+              style={{ background: theme === 'dark' ? '#1e2633' : '#f0f0f0' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#2d3748' : '#e5e7eb'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#1e2633' : '#f0f0f0'; }}
+            >
+              <div
+                className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+                style={{ background: '#1456f0' }}
+              >
+                <span className="text-white font-bold text-xs">
+                  {activeWorkspace?.name?.[0]?.toUpperCase() ?? 'W'}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold truncate" style={{ color: theme === 'dark' ? '#f0f0f0' : '#181e25' }}>
+                  {activeWorkspace?.name ?? 'Workspace'}
+                </p>
+                <p className="text-xs" style={{ color: '#8e8e93' }}>Workspace</p>
+              </div>
+              <ChevronDown
+                className="w-4 h-4 shrink-0 transition-transform"
+                style={{
+                  color: '#8e8e93',
+                  transform: wsSwitcherOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                }}
+              />
+            </button>
+
+            {/* Dropdown */}
+            {wsSwitcherOpen && (
+              <div
+                className="absolute left-0 right-0 top-full mt-1 rounded-xl py-1 shadow-xl z-50"
+                style={{
+                  background: theme === 'dark' ? '#1e2633' : '#ffffff',
+                  border: theme === 'dark' ? '1px solid #2d3748' : '1px solid #e5e7eb',
+                }}
+              >
+                {workspaces.map((ws) => (
+                  <button
+                    key={ws.id}
+                    onClick={() => switchWorkspace(ws.id)}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-left transition-colors"
+                    onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#2d3748' : '#f0f0f0'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <div
+                      className="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
+                      style={{ background: '#1456f0' }}
+                    >
+                      <span className="text-white font-bold" style={{ fontSize: '10px' }}>
+                        {ws.name[0].toUpperCase()}
+                      </span>
+                    </div>
+                    <span
+                      className="text-xs font-medium flex-1 truncate"
+                      style={{ color: theme === 'dark' ? '#f0f0f0' : '#181e25' }}
+                    >
+                      {ws.name}
+                    </span>
+                    {ws.id === activeWorkspace?.id && (
+                      <Check className="w-3.5 h-3.5 shrink-0" style={{ color: '#1456f0' }} />
+                    )}
+                  </button>
+                ))}
+                <div
+                  className="mx-3 my-1"
+                  style={{ borderTop: theme === 'dark' ? '1px solid #2d3748' : '1px solid #f2f3f5' }}
+                />
+                <button
+                  onClick={() => { setWsSwitcherOpen(false); setSidebarOpen(false); navigate('/settings'); }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-left transition-colors"
+                  onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#2d3748' : '#f0f0f0'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <Settings className="w-3.5 h-3.5 shrink-0" style={{ color: '#8e8e93' }} />
+                  <span className="text-xs" style={{ color: '#8e8e93' }}>Manage Workspaces</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Navigation */}
         <nav className="flex-1 px-3 py-1 space-y-0.5 overflow-y-auto">
           {navigation.map((item) => (
@@ -117,35 +238,31 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* Workspace badge + theme */}
+        {/* Bottom: user display + theme toggle */}
         <div
           className="p-4 space-y-3"
           style={{ borderTop: theme === 'dark' ? '1px solid #2d3748' : '1px solid #f2f3f5' }}
         >
-          {/* Workspace chip — click to open Settings */}
-          <NavLink
-            to="/settings"
-            onClick={() => setSidebarOpen(false)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl transition-colors"
-            style={{ background: theme === 'dark' ? '#1e2633' : '#f0f0f0' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#2d3748' : '#e5e7eb'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#1e2633' : '#f0f0f0'; }}
+          {/* User display — click to go to Settings */}
+          <button
+            onClick={() => { setSidebarOpen(false); navigate('/settings'); }}
+            className="flex items-center gap-2 w-full px-3 py-2 rounded-xl transition-colors text-left"
+            onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#2d3748' : '#f0f0f0'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
           >
             <div
-              className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
-              style={{ background: '#1456f0' }}
+              className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-white font-bold text-xs"
+              style={{ background: '#6366f1' }}
             >
-              <span className="text-white font-bold text-xs">
-                {activeWorkspace?.name?.[0]?.toUpperCase() ?? 'W'}
-              </span>
+              {displayName[0]?.toUpperCase() ?? 'U'}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold truncate" style={{ color: theme === 'dark' ? '#f0f0f0' : '#181e25' }}>
-                {activeWorkspace?.name ?? 'Workspace'}
-              </p>
-              <p className="text-xs" style={{ color: '#8e8e93' }}>Workspace</p>
-            </div>
-          </NavLink>
+            <span
+              className="text-xs font-semibold truncate"
+              style={{ color: theme === 'dark' ? '#f0f0f0' : '#181e25' }}
+            >
+              {displayName}
+            </span>
+          </button>
 
           {/* Theme toggle */}
           <button

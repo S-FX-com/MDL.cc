@@ -17,8 +17,10 @@ import {
 import { links, Link as LinkType, LinksResponse, groups as groupsApi, LinkGroup } from '../lib/api';
 import { format, parseISO } from 'date-fns';
 import CreateLinkModal from '../components/CreateLinkModal';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 
 export default function Links() {
+  const { activeWorkspaceId, linkWorkspaces } = useWorkspace();
   const [searchParams, setSearchParams] = useSearchParams();
   const [data, setData] = useState<LinksResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,18 +45,41 @@ export default function Links() {
 
   useEffect(() => {
     loadLinks();
-  }, [page, selectedGroup, search]);
+  }, [page, selectedGroup, search, activeWorkspaceId, linkWorkspaces]);
 
   const loadLinks = async () => {
     setLoading(true);
+    // Fetch a large page to allow client-side workspace filtering
     const response = await links.list({
-      page,
-      limit: 20,
+      page: 1,
+      limit: 500,
       group_id: selectedGroup || undefined,
       search: search || undefined,
     });
     if (response.success && response.data) {
-      setData(response.data);
+      // Filter links to only show those belonging to the active workspace.
+      // Links with no workspace association are legacy/unassigned — show them in all workspaces.
+      const filtered = response.data.links.filter((link) => {
+        const wsId = linkWorkspaces[link.id];
+        return !wsId || wsId === activeWorkspaceId;
+      });
+
+      // Paginate the filtered results client-side
+      const limit = 20;
+      const totalFiltered = filtered.length;
+      const pages = Math.max(1, Math.ceil(totalFiltered / limit));
+      const safePage = Math.min(page, pages);
+      const pageLinks = filtered.slice((safePage - 1) * limit, safePage * limit);
+
+      setData({
+        links: pageLinks,
+        pagination: {
+          page: safePage,
+          limit,
+          total: totalFiltered,
+          pages,
+        },
+      });
     }
     setLoading(false);
   };

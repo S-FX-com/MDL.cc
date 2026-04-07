@@ -32,6 +32,7 @@ interface WorkspaceContextType {
   teamMembers: TeamMember[];
   customDomains: CustomDomain[];
   inviteCode: string;
+  linkWorkspaces: Record<string, string>; // linkId -> workspaceId
   // Actions
   setActiveWorkspaceId: (id: string) => void;
   createAgency: () => void;
@@ -45,6 +46,7 @@ interface WorkspaceContextType {
   verifyDomain: (id: string) => Promise<boolean>;
   removeDomain: (id: string) => void;
   regenerateInviteCode: () => string;
+  associateLinkWithWorkspace: (linkId: string, workspaceId: string) => void;
 }
 
 // ── Storage helpers ──────────────────────────────────────────────────────────
@@ -56,6 +58,7 @@ const S = {
   teamMembers:   'mdl-team-members',
   customDomains: 'mdl-custom-domains',
   inviteCode:    'mdl-invite-code',
+  linkWorkspaces: 'mdl-link-workspaces',
 };
 
 function load<T>(key: string, fallback: T): T {
@@ -98,6 +101,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [hasAgency, setHasAgency]         = useState(() => load<boolean>(S.hasAgency, false));
   const [teamMembers, setTeamMembers]     = useState<TeamMember[]>(() => load(S.teamMembers, []));
   const [customDomains, setCustomDomains] = useState<CustomDomain[]>(() => load(S.customDomains, []));
+  const [linkWorkspaces, setLinkWorkspaces] = useState<Record<string, string>>(() => load(S.linkWorkspaces, {}));
   const [inviteCode, setInviteCode]       = useState<string>(() => {
     const stored = localStorage.getItem(S.inviteCode);
     return stored || generateCode();
@@ -209,6 +213,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     save(S.customDomains, updated);
   }, [customDomains]);
 
+  const associateLinkWithWorkspace = useCallback((linkId: string, workspaceId: string) => {
+    setLinkWorkspaces((prev) => {
+      const updated = { ...prev, [linkId]: workspaceId };
+      save(S.linkWorkspaces, updated);
+      return updated;
+    });
+  }, []);
+
   const regenerateInviteCode = useCallback((): string => {
     const code = generateCode();
     setInviteCode(code);
@@ -227,6 +239,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       teamMembers,
       customDomains,
       inviteCode,
+      linkWorkspaces,
       setActiveWorkspaceId,
       createAgency,
       addWorkspace,
@@ -239,6 +252,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       verifyDomain,
       removeDomain,
       regenerateInviteCode,
+      associateLinkWithWorkspace,
     }}>
       {children}
     </WorkspaceContext.Provider>
