@@ -3,6 +3,7 @@ import { X, Link2, Copy, Check, ChevronDown, ChevronUp, Zap, Settings2, Download
 import { links, groups as groupsApi, LinkGroup, CreateLinkPayload, Link as LinkType } from '../lib/api';
 import QRCodeDisplay, { useQRDownload } from './QRCodeDisplay';
 import clsx from 'clsx';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 
 interface CreateLinkModalProps {
   open: boolean;
@@ -16,6 +17,7 @@ interface CreateLinkModalProps {
 type QuickMode = 'confirm' | 'customize';
 
 export default function CreateLinkModal({ open, onClose, initialUrl = '', onSuccess }: CreateLinkModalProps) {
+  const { activeWorkspaceId, associateLinkWithWorkspace } = useWorkspace();
   const [url, setUrl] = useState(initialUrl);
   const [customCode, setCustomCode] = useState('');
   const [title, setTitle] = useState('');
@@ -74,6 +76,7 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
       const response = await links.create(payload);
 
       if (response.success && response.data) {
+        associateLinkWithWorkspace(response.data.id, activeWorkspaceId);
         setCreatedLink(response.data);
         onSuccess?.(response.data);
       } else {
