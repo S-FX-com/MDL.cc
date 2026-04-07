@@ -145,7 +145,7 @@ function DnsInstructions({ domain }: { domain: string }) {
 export default function Settings() {
   const { setTheme } = useTheme();
   const {
-    workspaces, activeWorkspaceId, activeWorkspace, hasAgency,
+    workspaces, activeWorkspaceId, hasAgency,
     teamMembers, customDomains, inviteCode,
     setActiveWorkspaceId, createAgency,
     addWorkspace, renameWorkspace, deleteWorkspace,
