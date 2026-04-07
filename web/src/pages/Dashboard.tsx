@@ -4,6 +4,7 @@ import { Link2, MousePointerClick, TrendingUp, ArrowUpRight, ExternalLink } from
 import { stats, DashboardStats } from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, parseISO } from 'date-fns';
+import { useTheme } from '../contexts/ThemeContext';
 
 // Minimax-style stat accent colors
 const STATS = [
@@ -34,6 +35,8 @@ const STATS = [
 ];
 
 export default function Dashboard() {
+  const { theme } = useTheme();
+  const dark = theme === 'dark';
   const [data, setData] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -61,7 +64,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* ── Page header ───────────────────────────────────────────────────── */}
       <div>
-        <h1 className="font-display text-2xl font-semibold" style={{ color: '#181e25' }}>
+        <h1 className="font-display text-2xl font-semibold" style={{ color: dark ? '#f0f0f0' : '#181e25' }}>
           Dashboard
         </h1>
         <p className="text-sm mt-1" style={{ color: '#8e8e93', fontFamily: '"DM Sans", sans-serif' }}>
@@ -82,7 +85,7 @@ export default function Dashboard() {
               </div>
               <span
                 className="badge"
-                style={{ background: '#f0f0f0', color: '#45515e', fontSize: '11px', fontWeight: 600 }}
+                style={{ background: dark ? '#2d3748' : '#f0f0f0', color: dark ? '#94a3b8' : '#45515e', fontSize: '11px', fontWeight: 600 }}
               >
                 {badge}
               </span>
@@ -99,7 +102,7 @@ export default function Dashboard() {
         <div className="card p-6">
           <h3
             className="font-display font-semibold mb-4"
-            style={{ fontSize: '15px', color: '#181e25' }}
+            style={{ fontSize: '15px', color: dark ? '#f0f0f0' : '#181e25' }}
           >
             Clicks Over Time
           </h3>
@@ -156,9 +159,9 @@ export default function Dashboard() {
         <div className="card overflow-hidden">
           <div
             className="flex items-center justify-between px-5 py-4"
-            style={{ borderBottom: '1px solid #f2f3f5' }}
+            style={{ borderBottom: `1px solid ${dark ? '#2d3748' : '#f2f3f5'}` }}
           >
-            <h3 className="font-display font-semibold" style={{ fontSize: '15px', color: '#181e25' }}>
+            <h3 className="font-display font-semibold" style={{ fontSize: '15px', color: dark ? '#f0f0f0' : '#181e25' }}>
               Recent Links
             </h3>
             <Link
@@ -176,12 +179,12 @@ export default function Dashboard() {
                   key={link.id}
                   to={`/links/${link.id}`}
                   className="flex items-center justify-between px-5 py-3.5 transition-colors"
-                  style={{ borderBottom: '1px solid #f8f9fa' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#fafafa'; }}
+                  style={{ borderBottom: `1px solid ${dark ? '#2d3748' : '#f8f9fa'}` }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = dark ? 'rgba(255,255,255,0.04)' : '#fafafa'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate" style={{ color: '#181e25' }}>
+                    <p className="text-sm font-medium truncate" style={{ color: dark ? '#f0f0f0' : '#181e25' }}>
                       {link.title || link.short_code}
                     </p>
                     <p className="text-xs truncate mt-0.5" style={{ color: '#1456f0' }}>
@@ -209,16 +212,16 @@ export default function Dashboard() {
       <div className="card overflow-hidden">
         <div
           className="flex items-center justify-between px-5 py-4"
-          style={{ borderBottom: '1px solid #f2f3f5' }}
+          style={{ borderBottom: `1px solid ${dark ? '#2d3748' : '#f2f3f5'}` }}
         >
-          <h3 className="font-display font-semibold" style={{ fontSize: '15px', color: '#181e25' }}>
+          <h3 className="font-display font-semibold" style={{ fontSize: '15px', color: dark ? '#f0f0f0' : '#181e25' }}>
             Top Performing Links
           </h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr style={{ borderBottom: '1px solid #f2f3f5' }}>
+              <tr style={{ borderBottom: `1px solid ${dark ? '#2d3748' : '#f2f3f5'}` }}>
                 {['Link', 'Destination', 'Clicks'].map((col, i) => (
                   <th
                     key={col}
@@ -235,22 +238,22 @@ export default function Dashboard() {
                 data.top_links.map((link, index) => (
                   <tr
                     key={link.id}
-                    style={{ borderBottom: '1px solid #f8f9fa' }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = '#fafafa'; }}
+                    style={{ borderBottom: `1px solid ${dark ? '#2d3748' : '#f8f9fa'}` }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = dark ? 'rgba(255,255,255,0.04)' : '#fafafa'; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
                   >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <span
                           className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
-                          style={{ background: '#eef2ff', color: '#1456f0' }}
+                          style={{ background: dark ? 'rgba(20,86,240,0.15)' : '#eef2ff', color: dark ? '#60a5fa' : '#1456f0' }}
                         >
                           {index + 1}
                         </span>
                         <Link
                           to={`/links/${link.id}`}
                           className="text-sm font-medium"
-                          style={{ color: '#1456f0' }}
+                          style={{ color: dark ? '#60a5fa' : '#1456f0' }}
                         >
                           mdl.cc/{link.short_code}
                         </Link>
@@ -258,11 +261,11 @@ export default function Dashboard() {
                     </td>
                     <td
                       className="px-5 py-3.5 text-sm truncate max-w-xs"
-                      style={{ color: '#45515e' }}
+                      style={{ color: dark ? '#8e8e93' : '#45515e' }}
                     >
                       {link.original_url}
                     </td>
-                    <td className="px-5 py-3.5 text-right text-sm font-semibold" style={{ color: '#181e25' }}>
+                    <td className="px-5 py-3.5 text-right text-sm font-semibold" style={{ color: dark ? '#f0f0f0' : '#181e25' }}>
                       {link.click_count?.toLocaleString() || 0}
                     </td>
                   </tr>

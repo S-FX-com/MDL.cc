@@ -1,121 +1,248 @@
 import { useState } from 'react';
 import {
-  Sun,
-  Moon,
-  Monitor,
-  Globe,
-  Key,
-  Shield,
-  Code,
-  ExternalLink,
-  User,
-  Building2,
-  Users,
-  Edit2,
-  Check,
-  X,
-  Plus,
-  Trash2,
+  Sun, Moon, Monitor, Globe, Key, Shield, Code, ExternalLink,
+  User, Building2, Users, Edit2, Check, X, Plus, Trash2,
+  Copy, RefreshCw, ChevronDown, ChevronUp, AlertCircle, CheckCircle2,
+  Loader2, Link2,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
+import type { TeamMember, CustomDomain } from '../contexts/WorkspaceContext';
 import clsx from 'clsx';
 
 type ThemeOption = 'light' | 'dark' | 'system';
 
-// ---------------------------------------------------------------------------
-// Workspace / profile data persisted in localStorage
-// ---------------------------------------------------------------------------
+const DISPLAY_NAME_KEY = 'mdl-display-name';
 
-const STORAGE_KEYS = {
-  displayName: 'mdl-display-name',
-  workspaceName: 'mdl-workspace-name',
-  workspaces: 'mdl-workspaces',
-};
-
-function getStoredWorkspaces(): { id: string; name: string; role: string }[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.workspaces);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return [{ id: 'default', name: localStorage.getItem(STORAGE_KEYS.workspaceName) || 'My Workspace', role: 'Admin' }];
+// ── Small reusable section header ─────────────────────────────────────────────
+function SectionHeader({
+  icon: Icon,
+  iconBg,
+  iconColor,
+  title,
+  subtitle,
+  action,
+}: {
+  icon: React.ElementType;
+  iconBg: string;
+  iconColor: string;
+  title: string;
+  subtitle: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="p-6 border-b border-dark-100 dark:border-dark-700">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center', iconBg)}>
+            <Icon className={clsx('w-5 h-5', iconColor)} />
+          </div>
+          <div>
+            <h2 className="font-semibold text-dark-900 dark:text-white">{title}</h2>
+            <p className="text-sm text-dark-500 dark:text-dark-400">{subtitle}</p>
+          </div>
+        </div>
+        {action}
+      </div>
+    </div>
+  );
 }
 
-function saveWorkspaces(ws: { id: string; name: string; role: string }[]) {
-  localStorage.setItem(STORAGE_KEYS.workspaces, JSON.stringify(ws));
+// ── Inline editable field ─────────────────────────────────────────────────────
+function InlineEdit({
+  value,
+  onSave,
+  onCancel,
+  placeholder = 'Enter name',
+}: {
+  value: string;
+  onSave: (v: string) => void;
+  onCancel: () => void;
+  placeholder?: string;
+}) {
+  const [val, setVal] = useState(value);
+  return (
+    <div className="flex items-center gap-2 flex-1 mr-2">
+      <input
+        type="text"
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        className="input flex-1 py-1.5"
+        autoFocus
+        placeholder={placeholder}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') onSave(val);
+          if (e.key === 'Escape') onCancel();
+        }}
+      />
+      <button onClick={() => onSave(val)} className="btn btn-primary btn-sm">
+        <Check className="w-4 h-4" />
+      </button>
+      <button onClick={onCancel} className="btn btn-secondary btn-sm">
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  );
 }
 
-// ---------------------------------------------------------------------------
+// ── DNS Instructions component ────────────────────────────────────────────────
+function DnsInstructions({ domain }: { domain: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-3">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 text-xs font-medium text-primary-600 dark:text-primary-400"
+      >
+        {open ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        How to configure DNS
+      </button>
+      {open && (
+        <div className="mt-3 p-4 rounded-xl bg-dark-50 dark:bg-dark-800 space-y-3 text-sm">
+          <p className="font-medium text-dark-900 dark:text-white">
+            Add the following DNS record at your domain registrar:
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs font-mono">
+              <thead>
+                <tr className="text-dark-500 dark:text-dark-400 text-left">
+                  <th className="pb-1 pr-4">Type</th>
+                  <th className="pb-1 pr-4">Host / Name</th>
+                  <th className="pb-1">Value / Target</th>
+                </tr>
+              </thead>
+              <tbody className="text-dark-900 dark:text-white">
+                <tr>
+                  <td className="pr-4 py-1">
+                    <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">CNAME</span>
+                  </td>
+                  <td className="pr-4 py-1">{domain.replace(/^www\./, '') === domain ? '@' : 'www'}</td>
+                  <td className="py-1 text-primary-600 dark:text-primary-400">cname.mdl.cc</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="flex gap-2 items-start p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              DNS changes can take up to 48 hours to propagate globally. Click <strong>Verify</strong> once you've added the record.
+            </p>
+          </div>
+          <p className="text-xs text-dark-500 dark:text-dark-400">
+            Need help?{' '}
+            <a href="#" className="text-primary-600 dark:text-primary-400 underline underline-offset-2">
+              Contact support
+            </a>
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main Settings page ────────────────────────────────────────────────────────
 
 export default function Settings() {
   const { setTheme } = useTheme();
+  const {
+    workspaces, activeWorkspaceId, activeWorkspace, hasAgency,
+    teamMembers, customDomains, inviteCode,
+    setActiveWorkspaceId, createAgency,
+    addWorkspace, renameWorkspace, deleteWorkspace,
+    inviteMemberByEmail, assignMemberWorkspace, removeMember,
+    addDomain, verifyDomain, removeDomain, regenerateInviteCode,
+  } = useWorkspace();
+
+  // ── Theme ──────────────────────────────────────────────────────────────────
   const [selectedTheme, setSelectedTheme] = useState<ThemeOption>(
     (localStorage.getItem('mdl-theme') as ThemeOption) || 'system'
   );
 
-  // Profile
-  const [displayName, setDisplayName] = useState(localStorage.getItem(STORAGE_KEYS.displayName) || '');
-  const [displayNameSaved, setDisplayNameSaved] = useState(false);
-
-  // Workspace editing
-  const [workspaces, setWorkspaces] = useState(getStoredWorkspaces);
-  const [editingWsId, setEditingWsId] = useState<string | null>(null);
-  const [editingWsName, setEditingWsName] = useState('');
-  const [showNewWsForm, setShowNewWsForm] = useState(false);
-  const [newWsName, setNewWsName] = useState('');
-
-  const handleThemeChange = (newTheme: ThemeOption) => {
-    setSelectedTheme(newTheme);
-    if (newTheme === 'system') {
+  const handleThemeChange = (t: ThemeOption) => {
+    setSelectedTheme(t);
+    if (t === 'system') {
       localStorage.removeItem('mdl-theme');
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      setTheme(systemTheme);
+      setTheme(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     } else {
-      setTheme(newTheme);
+      setTheme(t);
     }
   };
 
+  // ── Profile ────────────────────────────────────────────────────────────────
+  const [displayName, setDisplayName] = useState(localStorage.getItem(DISPLAY_NAME_KEY) || '');
+  const [displayNameSaved, setDisplayNameSaved] = useState(false);
+
   const saveDisplayName = () => {
-    localStorage.setItem(STORAGE_KEYS.displayName, displayName);
+    localStorage.setItem(DISPLAY_NAME_KEY, displayName);
     setDisplayNameSaved(true);
     setTimeout(() => setDisplayNameSaved(false), 2000);
   };
 
-  const startEditWs = (ws: { id: string; name: string }) => {
-    setEditingWsId(ws.id);
-    setEditingWsName(ws.name);
+  // ── Agency ────────────────────────────────────────────────────────────────
+  const [agencyName, setAgencyName] = useState(
+    () => localStorage.getItem('mdl-agency-name') || ''
+  );
+  const [agencyInput, setAgencyInput] = useState('');
+  const [showAgencyForm, setShowAgencyForm] = useState(false);
+
+  const handleCreateAgency = () => {
+    if (!agencyInput.trim()) return;
+    const name = agencyInput.trim();
+    setAgencyName(name);
+    localStorage.setItem('mdl-agency-name', name);
+    createAgency();
+    setShowAgencyForm(false);
+    setAgencyInput('');
   };
 
-  const saveWsName = () => {
-    if (!editingWsName.trim()) return;
-    const updated = workspaces.map((w) =>
-      w.id === editingWsId ? { ...w, name: editingWsName.trim() } : w
-    );
-    setWorkspaces(updated);
-    saveWorkspaces(updated);
-    // Also update the legacy key for the sidebar
-    const current = updated.find((w) => w.id === editingWsId);
-    if (current) localStorage.setItem(STORAGE_KEYS.workspaceName, current.name);
-    setEditingWsId(null);
-  };
+  // ── Workspaces ────────────────────────────────────────────────────────────
+  const [editingWsId, setEditingWsId] = useState<string | null>(null);
+  const [showNewWsForm, setShowNewWsForm] = useState(false);
+  const [newWsName, setNewWsName] = useState('');
 
-  const cancelEditWs = () => setEditingWsId(null);
-
-  const createWorkspace = () => {
+  const handleAddWorkspace = () => {
     if (!newWsName.trim()) return;
-    const newWs = { id: crypto.randomUUID(), name: newWsName.trim(), role: 'Admin' };
-    const updated = [...workspaces, newWs];
-    setWorkspaces(updated);
-    saveWorkspaces(updated);
+    const ws = addWorkspace(newWsName);
     setNewWsName('');
     setShowNewWsForm(false);
+    setActiveWorkspaceId(ws.id);
   };
 
-  const deleteWorkspace = (id: string) => {
-    if (workspaces.length === 1) return; // keep at least one
-    if (!confirm('Remove this workspace?')) return;
-    const updated = workspaces.filter((w) => w.id !== id);
-    setWorkspaces(updated);
-    saveWorkspaces(updated);
+  // ── Team Members ──────────────────────────────────────────────────────────
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteWsIds, setInviteWsIds] = useState<string[]>([activeWorkspaceId]);
+  const [inviteTab, setInviteTab] = useState<'email' | 'code'>('email');
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [expandedMember, setExpandedMember] = useState<string | null>(null);
+
+  const handleInvite = () => {
+    if (!inviteEmail.trim() || !inviteEmail.includes('@')) return;
+    inviteMemberByEmail(inviteEmail.trim(), inviteWsIds);
+    setInviteEmail('');
+    setInviteWsIds([activeWorkspaceId]);
+  };
+
+  const copyInviteCode = async () => {
+    await navigator.clipboard.writeText(inviteCode);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
+
+  // ── Custom Domains ─────────────────────────────────────────────────────────
+  const [domainInput, setDomainInput] = useState('');
+  const [domainWsId, setDomainWsId] = useState(activeWorkspaceId);
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
+
+  const handleAddDomain = () => {
+    if (!domainInput.trim()) return;
+    addDomain(domainInput, domainWsId);
+    setDomainInput('');
+  };
+
+  const handleVerify = async (id: string) => {
+    setVerifyingId(id);
+    await verifyDomain(id);
+    setVerifyingId(null);
   };
 
   const themeOptions = [
@@ -132,72 +259,128 @@ export default function Settings() {
         <p className="text-dark-500 dark:text-dark-400 mt-1">Customize your MDL.cc experience</p>
       </div>
 
-      {/* ── Profile ─────────────────────────────────────────────────────────── */}
+      {/* ── 1. Profile ──────────────────────────────────────────────────────── */}
       <div className="card">
-        <div className="p-6 border-b border-dark-100 dark:border-dark-700">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-              <User className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-dark-900 dark:text-white">Profile</h2>
-              <p className="text-sm text-dark-500 dark:text-dark-400">Your personal display information</p>
-            </div>
-          </div>
-        </div>
-        <div className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">
-              Display name
-            </label>
-            <div className="flex gap-3">
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Your name"
-                className="input flex-1"
-                onKeyDown={(e) => e.key === 'Enter' && saveDisplayName()}
-              />
-              <button
-                onClick={saveDisplayName}
-                className={clsx('btn', displayNameSaved ? 'btn-primary' : 'btn-secondary')}
-              >
-                {displayNameSaved ? <Check className="w-4 h-4" /> : null}
-                {displayNameSaved ? 'Saved!' : 'Save'}
-              </button>
-            </div>
+        <SectionHeader
+          icon={User}
+          iconBg="bg-indigo-100 dark:bg-indigo-900/30"
+          iconColor="text-indigo-600 dark:text-indigo-400"
+          title="Profile"
+          subtitle="Your personal display information"
+        />
+        <div className="p-6">
+          <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">
+            Display name
+          </label>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Your name"
+              className="input flex-1"
+              onKeyDown={(e) => e.key === 'Enter' && saveDisplayName()}
+            />
+            <button
+              onClick={saveDisplayName}
+              className={clsx('btn', displayNameSaved ? 'btn-primary' : 'btn-secondary')}
+            >
+              {displayNameSaved && <Check className="w-4 h-4" />}
+              {displayNameSaved ? 'Saved!' : 'Save'}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* ── Workspaces ───────────────────────────────────────────────────────── */}
+      {/* ── 2. Agency ───────────────────────────────────────────────────────── */}
       <div className="card">
-        <div className="p-6 border-b border-dark-100 dark:border-dark-700">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+        <SectionHeader
+          icon={Building2}
+          iconBg="bg-violet-100 dark:bg-violet-900/30"
+          iconColor="text-violet-600 dark:text-violet-400"
+          title="Agency"
+          subtitle="Enables multiple workspaces and team invitations"
+        />
+        <div className="p-6">
+          {hasAgency ? (
+            <div className="flex items-center gap-3 p-4 bg-dark-50 dark:bg-dark-800 rounded-xl">
+              <div className="w-9 h-9 rounded-lg bg-violet-500 flex items-center justify-center shrink-0">
+                <span className="text-white font-bold text-sm">{agencyName[0]?.toUpperCase() ?? 'A'}</span>
               </div>
-              <div>
-                <h2 className="font-semibold text-dark-900 dark:text-white">Workspaces</h2>
-                <p className="text-sm text-dark-500 dark:text-dark-400">
-                  Manage your workspaces and agency
-                </p>
+              <div className="flex-1">
+                <p className="font-semibold text-dark-900 dark:text-white">{agencyName}</p>
+                <p className="text-xs text-dark-500 dark:text-dark-400">Agency account active</p>
+              </div>
+              <span className="badge badge-primary">Active</span>
+            </div>
+          ) : showAgencyForm ? (
+            <div className="space-y-3">
+              <p className="text-sm text-dark-600 dark:text-dark-300">
+                Give your agency a name. This will be used across workspaces and team invitations.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={agencyInput}
+                  onChange={(e) => setAgencyInput(e.target.value)}
+                  placeholder="Agency name (e.g. Acme Marketing)"
+                  className="input flex-1"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleCreateAgency();
+                    if (e.key === 'Escape') setShowAgencyForm(false);
+                  }}
+                />
+                <button onClick={handleCreateAgency} className="btn btn-primary">Create</button>
+                <button onClick={() => setShowAgencyForm(false)} className="btn btn-secondary">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             </div>
-            <button
-              onClick={() => setShowNewWsForm(!showNewWsForm)}
-              className="btn btn-secondary btn-sm gap-1"
-            >
-              <Plus className="w-4 h-4" />
-              New Workspace
-            </button>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex gap-3 items-start p-4 rounded-xl bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800">
+                <AlertCircle className="w-5 h-5 text-violet-600 dark:text-violet-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-violet-900 dark:text-violet-100">
+                    Agency required for advanced features
+                  </p>
+                  <p className="text-xs text-violet-700 dark:text-violet-300">
+                    Create an Agency to unlock multiple workspaces, team member invitations, and custom branded domains.
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setShowAgencyForm(true)} className="btn btn-primary gap-2">
+                <Building2 className="w-4 h-4" />
+                Create Agency
+              </button>
+            </div>
+          )}
         </div>
+      </div>
 
+      {/* ── 3. Workspaces ───────────────────────────────────────────────────── */}
+      <div className="card">
+        <SectionHeader
+          icon={Link2}
+          iconBg="bg-orange-100 dark:bg-orange-900/30"
+          iconColor="text-orange-600 dark:text-orange-400"
+          title="Workspaces"
+          subtitle="Switch between and manage your workspaces"
+          action={
+            hasAgency ? (
+              <button
+                onClick={() => setShowNewWsForm(!showNewWsForm)}
+                className="btn btn-secondary btn-sm gap-1"
+              >
+                <Plus className="w-4 h-4" />
+                Add Workspace
+              </button>
+            ) : null
+          }
+        />
         <div className="p-6 space-y-3">
-          {/* New workspace form */}
+          {/* Add workspace form */}
           {showNewWsForm && (
             <div className="flex gap-2 p-3 rounded-xl border border-dashed border-dark-300 dark:border-dark-600">
               <input
@@ -208,131 +391,393 @@ export default function Settings() {
                 className="input flex-1 py-1.5"
                 autoFocus
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') createWorkspace();
+                  if (e.key === 'Enter') handleAddWorkspace();
                   if (e.key === 'Escape') setShowNewWsForm(false);
                 }}
               />
-              <button onClick={createWorkspace} className="btn btn-primary btn-sm">Create</button>
+              <button onClick={handleAddWorkspace} className="btn btn-primary btn-sm">Create</button>
               <button onClick={() => setShowNewWsForm(false)} className="btn btn-secondary btn-sm">
                 <X className="w-4 h-4" />
               </button>
             </div>
           )}
 
-          {workspaces.map((ws) => (
-            <div
-              key={ws.id}
-              className="flex items-center justify-between p-4 bg-dark-50 dark:bg-dark-800 rounded-xl"
-            >
-              {editingWsId === ws.id ? (
-                <div className="flex items-center gap-2 flex-1 mr-2">
-                  <input
-                    type="text"
-                    value={editingWsName}
-                    onChange={(e) => setEditingWsName(e.target.value)}
-                    className="input flex-1 py-1.5"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') saveWsName();
-                      if (e.key === 'Escape') cancelEditWs();
-                    }}
+          {workspaces.map((ws) => {
+            const isActive = ws.id === activeWorkspaceId;
+            return (
+              <div
+                key={ws.id}
+                className={clsx(
+                  'flex items-center justify-between p-4 rounded-xl transition-all cursor-pointer',
+                  isActive
+                    ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800'
+                    : 'bg-dark-50 dark:bg-dark-800 border border-transparent hover:border-dark-200 dark:hover:border-dark-600'
+                )}
+                onClick={() => editingWsId !== ws.id && setActiveWorkspaceId(ws.id)}
+              >
+                {editingWsId === ws.id ? (
+                  <InlineEdit
+                    value={ws.name}
+                    onSave={(v) => { renameWorkspace(ws.id, v); setEditingWsId(null); }}
+                    onCancel={() => setEditingWsId(null)}
                   />
-                  <button onClick={saveWsName} className="btn btn-primary btn-sm">
-                    <Check className="w-4 h-4" />
-                  </button>
-                  <button onClick={cancelEditWs} className="btn btn-secondary btn-sm">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center shrink-0">
-                    <span className="text-white font-bold text-sm">{ws.name[0]?.toUpperCase()}</span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-dark-900 dark:text-white">{ws.name}</p>
-                    <p className="text-xs text-dark-500 dark:text-dark-400">Role: {ws.role}</p>
-                  </div>
-                </div>
-              )}
-
-              {editingWsId !== ws.id && (
-                <div className="flex items-center gap-2">
-                  <span className="badge badge-primary">{ws.role}</span>
-                  <button
-                    onClick={() => startEditWs(ws)}
-                    className="p-1.5 rounded hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors"
-                    title="Rename workspace"
-                  >
-                    <Edit2 className="w-4 h-4 text-dark-400" />
-                  </button>
-                  {workspaces.length > 1 && (
-                    <button
-                      onClick={() => deleteWorkspace(ws.id)}
-                      className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
-                      title="Remove workspace"
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ background: isActive ? '#1456f0' : '#64748b' }}
                     >
-                      <Trash2 className="w-4 h-4 text-red-400" />
+                      <span className="text-white font-bold text-sm">{ws.name[0]?.toUpperCase()}</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-dark-900 dark:text-white">{ws.name}</p>
+                      <p className="text-xs text-dark-500 dark:text-dark-400">Role: {ws.role}</p>
+                    </div>
+                  </div>
+                )}
+
+                {editingWsId !== ws.id && (
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    {isActive && <span className="badge badge-primary">Active</span>}
+                    <button
+                      onClick={() => setEditingWsId(ws.id)}
+                      className="p-1.5 rounded hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors"
+                      title="Rename workspace"
+                    >
+                      <Edit2 className="w-4 h-4 text-dark-400" />
                     </button>
+                    {workspaces.length > 1 && (
+                      <button
+                        onClick={() => { if (confirm('Remove this workspace?')) deleteWorkspace(ws.id); }}
+                        className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
+                        title="Remove workspace"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {!hasAgency && (
+            <p className="text-xs text-dark-400 dark:text-dark-500 pt-1">
+              <span className="text-violet-600 dark:text-violet-400 font-medium">Create an Agency</span> above to add more workspaces.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ── 4. Team Members ─────────────────────────────────────────────────── */}
+      <div className={clsx('card', !hasAgency && 'opacity-60 pointer-events-none select-none')}>
+        <SectionHeader
+          icon={Users}
+          iconBg="bg-teal-100 dark:bg-teal-900/30"
+          iconColor="text-teal-600 dark:text-teal-400"
+          title="Team Members"
+          subtitle={hasAgency ? 'Invite people and assign them to workspaces' : 'Requires Agency — create one above'}
+        />
+        <div className="p-6 space-y-5">
+          {/* Invite tabs */}
+          <div className="flex gap-1 p-1 bg-dark-100 dark:bg-dark-800 rounded-xl w-fit">
+            {(['email', 'code'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setInviteTab(tab)}
+                className={clsx(
+                  'px-4 py-1.5 rounded-lg text-sm font-medium transition-all',
+                  inviteTab === tab
+                    ? 'bg-white dark:bg-dark-700 text-dark-900 dark:text-white shadow-sm'
+                    : 'text-dark-500 dark:text-dark-400'
+                )}
+              >
+                {tab === 'email' ? 'Invite by Email' : 'Invite by Code'}
+              </button>
+            ))}
+          </div>
+
+          {inviteTab === 'email' ? (
+            <div className="space-y-3">
+              <div className="flex gap-3">
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="colleague@example.com"
+                  className="input flex-1"
+                  onKeyDown={(e) => e.key === 'Enter' && handleInvite()}
+                />
+                <button onClick={handleInvite} className="btn btn-primary gap-1.5">
+                  <Plus className="w-4 h-4" />
+                  Invite
+                </button>
+              </div>
+
+              {/* Workspace assignment for invite */}
+              <div>
+                <p className="text-xs font-medium text-dark-600 dark:text-dark-300 mb-2">
+                  Assign to workspaces:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {workspaces.map((ws) => {
+                    const selected = inviteWsIds.includes(ws.id);
+                    return (
+                      <button
+                        key={ws.id}
+                        onClick={() =>
+                          setInviteWsIds(
+                            selected
+                              ? inviteWsIds.filter((id) => id !== ws.id)
+                              : [...inviteWsIds, ws.id]
+                          )
+                        }
+                        className={clsx(
+                          'px-3 py-1 rounded-full text-xs font-medium border transition-all',
+                          selected
+                            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                            : 'border-dark-200 dark:border-dark-600 text-dark-500 dark:text-dark-400 hover:border-dark-300'
+                        )}
+                      >
+                        {selected && <Check className="w-3 h-3 inline mr-1" />}
+                        {ws.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-dark-600 dark:text-dark-300">
+                Share this code with your team. Anyone with this code can join your agency.
+              </p>
+              <div className="flex items-center gap-3 p-4 bg-dark-50 dark:bg-dark-800 rounded-xl">
+                <code className="flex-1 text-xl font-mono font-bold tracking-widest text-dark-900 dark:text-white">
+                  {inviteCode}
+                </code>
+                <button onClick={copyInviteCode} className="btn btn-secondary btn-sm gap-1.5">
+                  {codeCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {codeCopied ? 'Copied!' : 'Copy'}
+                </button>
+                <button
+                  onClick={regenerateInviteCode}
+                  className="p-2 rounded-lg hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors"
+                  title="Generate new code"
+                >
+                  <RefreshCw className="w-4 h-4 text-dark-400" />
+                </button>
+              </div>
+              <p className="text-xs text-dark-400 dark:text-dark-500">
+                Regenerating the code will invalidate the previous one.
+              </p>
+            </div>
+          )}
+
+          {/* Team member list */}
+          {teamMembers.length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-dark-100 dark:border-dark-700">
+              <p className="text-sm font-medium text-dark-700 dark:text-dark-300">
+                Members ({teamMembers.length})
+              </p>
+              {teamMembers.map((member: TeamMember) => (
+                <div key={member.id} className="rounded-xl border border-dark-100 dark:border-dark-700 overflow-hidden">
+                  <div
+                    className="flex items-center justify-between p-3 cursor-pointer hover:bg-dark-50 dark:hover:bg-dark-800 transition-colors"
+                    onClick={() => setExpandedMember(expandedMember === member.id ? null : member.id)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-dark-200 dark:bg-dark-600 flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold text-dark-600 dark:text-dark-300">
+                          {member.email[0]?.toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-dark-900 dark:text-white">{member.email}</p>
+                        <p className="text-xs text-dark-400 dark:text-dark-500">
+                          {member.workspaceIds.length === 0
+                            ? 'No workspaces assigned'
+                            : `${member.workspaceIds.length} workspace${member.workspaceIds.length > 1 ? 's' : ''}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={clsx(
+                        'badge',
+                        member.status === 'active' ? 'badge-green' : 'badge-gray'
+                      )}>
+                        {member.status === 'active' ? 'Active' : 'Pending'}
+                      </span>
+                      {expandedMember === member.id ? (
+                        <ChevronUp className="w-4 h-4 text-dark-400" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-dark-400" />
+                      )}
+                    </div>
+                  </div>
+
+                  {expandedMember === member.id && (
+                    <div className="p-3 border-t border-dark-100 dark:border-dark-700 bg-dark-50 dark:bg-dark-800 space-y-3">
+                      <p className="text-xs font-medium text-dark-600 dark:text-dark-300">
+                        Workspace access:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {workspaces.map((ws) => {
+                          const hasAccess = member.workspaceIds.includes(ws.id);
+                          return (
+                            <button
+                              key={ws.id}
+                              onClick={() => assignMemberWorkspace(member.id, ws.id, !hasAccess)}
+                              className={clsx(
+                                'px-3 py-1 rounded-full text-xs font-medium border transition-all',
+                                hasAccess
+                                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                                  : 'border-dark-200 dark:border-dark-600 text-dark-500 dark:text-dark-400 hover:border-dark-300'
+                              )}
+                            >
+                              {hasAccess && <Check className="w-3 h-3 inline mr-1" />}
+                              {ws.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button
+                        onClick={() => { if (confirm(`Remove ${member.email}?`)) removeMember(member.id); }}
+                        className="btn btn-danger btn-xs gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Remove member
+                      </button>
+                    </div>
                   )}
                 </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── 5. Custom Domains ────────────────────────────────────────────────── */}
+      <div className={clsx('card', !hasAgency && 'opacity-60 pointer-events-none select-none')}>
+        <SectionHeader
+          icon={Globe}
+          iconBg="bg-blue-100 dark:bg-blue-900/30"
+          iconColor="text-blue-600 dark:text-blue-400"
+          title="Custom Domains"
+          subtitle={hasAgency ? 'Use branded domains for your short links' : 'Requires Agency — create one above'}
+        />
+        <div className="p-6 space-y-5">
+          {/* Add domain form */}
+          <div className="space-y-3">
+            <p className="text-sm text-dark-600 dark:text-dark-300">
+              Add a custom domain to create branded short links (e.g. <code className="text-primary-600 dark:text-primary-400">go.yourcompany.com/slug</code>).
+            </p>
+            <div className="flex gap-3">
+              <input
+                type="text"
+                value={domainInput}
+                onChange={(e) => setDomainInput(e.target.value)}
+                placeholder="go.yourcompany.com"
+                className="input flex-1"
+                onKeyDown={(e) => e.key === 'Enter' && handleAddDomain()}
+              />
+              {workspaces.length > 1 && (
+                <select
+                  value={domainWsId}
+                  onChange={(e) => setDomainWsId(e.target.value)}
+                  className="input w-auto"
+                >
+                  {workspaces.map((ws) => (
+                    <option key={ws.id} value={ws.id}>{ws.name}</option>
+                  ))}
+                </select>
               )}
+              <button onClick={handleAddDomain} className="btn btn-primary gap-1.5 shrink-0">
+                <Plus className="w-4 h-4" />
+                Add Domain
+              </button>
             </div>
-          ))}
+          </div>
+
+          {/* Default domain */}
+          <div className="flex items-center justify-between p-4 bg-dark-50 dark:bg-dark-800 rounded-xl">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center shrink-0">
+                <span className="text-white font-bold text-sm">M</span>
+              </div>
+              <div>
+                <p className="font-medium text-dark-900 dark:text-white">mdl.cc</p>
+                <p className="text-xs text-dark-500 dark:text-dark-400">Default shared domain</p>
+              </div>
+            </div>
+            <span className="badge badge-primary">Default</span>
+          </div>
+
+          {/* Custom domains list */}
+          {customDomains.length > 0 && (
+            <div className="space-y-3">
+              {customDomains.map((d: CustomDomain) => {
+                const ws = workspaces.find((w) => w.id === d.workspaceId);
+                const isVerifying = verifyingId === d.id;
+                return (
+                  <div key={d.id} className="rounded-xl border border-dark-100 dark:border-dark-700 overflow-hidden">
+                    <div className="flex items-center justify-between p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                          <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-dark-900 dark:text-white">{d.domain}</p>
+                          <p className="text-xs text-dark-500 dark:text-dark-400">
+                            {ws ? `Workspace: ${ws.name}` : 'Unknown workspace'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {d.verified ? (
+                          <span className="flex items-center gap-1 badge badge-green">
+                            <CheckCircle2 className="w-3 h-3" /> Verified
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleVerify(d.id)}
+                            disabled={isVerifying}
+                            className="btn btn-secondary btn-sm gap-1.5"
+                          >
+                            {isVerifying ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            )}
+                            {isVerifying ? 'Checking…' : 'Verify'}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => { if (confirm(`Remove ${d.domain}?`)) removeDomain(d.id); }}
+                          className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-400" />
+                        </button>
+                      </div>
+                    </div>
+                    {!d.verified && <DnsInstructions domain={d.domain} />}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ── Team Members ─────────────────────────────────────────────────────── */}
+      {/* ── 6. Appearance ───────────────────────────────────────────────────── */}
       <div className="card">
-        <div className="p-6 border-b border-dark-100 dark:border-dark-700">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
-              <Users className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-dark-900 dark:text-white">Team Members</h2>
-              <p className="text-sm text-dark-500 dark:text-dark-400">
-                People with access to this workspace
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="p-6 space-y-3">
-          <p className="text-sm text-dark-500 dark:text-dark-400">
-            Invite team members to collaborate in your workspace.
-          </p>
-          <div className="flex gap-3">
-            <input
-              type="email"
-              placeholder="colleague@example.com"
-              className="input flex-1"
-            />
-            <button className="btn btn-secondary gap-1">
-              <Plus className="w-4 h-4" />
-              Invite
-            </button>
-          </div>
-          <p className="text-xs text-dark-400 dark:text-dark-500">
-            Invitations are managed in the Invitations page.
-          </p>
-        </div>
-      </div>
-
-      {/* ── Appearance ───────────────────────────────────────────────────────── */}
-      <div className="card">
-        <div className="p-6 border-b border-dark-100 dark:border-dark-700">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-              <Sun className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-dark-900 dark:text-white">Appearance</h2>
-              <p className="text-sm text-dark-500 dark:text-dark-400">
-                Customize how MDL.cc looks on your device
-              </p>
-            </div>
-          </div>
-        </div>
+        <SectionHeader
+          icon={Sun}
+          iconBg="bg-primary-100 dark:bg-primary-900/30"
+          iconColor="text-primary-600 dark:text-primary-400"
+          title="Appearance"
+          subtitle="Customize how MDL.cc looks on your device"
+        />
         <div className="p-6">
           <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-3">
             Theme
@@ -350,19 +795,12 @@ export default function Settings() {
                 )}
               >
                 <option.icon
-                  className={clsx(
-                    'w-6 h-6',
-                    selectedTheme === option.value ? 'text-primary-500' : 'text-dark-400'
-                  )}
+                  className={clsx('w-6 h-6', selectedTheme === option.value ? 'text-primary-500' : 'text-dark-400')}
                 />
-                <span
-                  className={clsx(
-                    'text-sm font-medium',
-                    selectedTheme === option.value
-                      ? 'text-primary-600 dark:text-primary-400'
-                      : 'text-dark-600 dark:text-dark-400'
-                  )}
-                >
+                <span className={clsx(
+                  'text-sm font-medium',
+                  selectedTheme === option.value ? 'text-primary-600 dark:text-primary-400' : 'text-dark-600 dark:text-dark-400'
+                )}>
                   {option.label}
                 </span>
               </button>
@@ -376,55 +814,15 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* ── Default Domain ───────────────────────────────────────────────────── */}
-      <div className="card">
-        <div className="p-6 border-b border-dark-100 dark:border-dark-700">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-              <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-dark-900 dark:text-white">Default Domain</h2>
-              <p className="text-sm text-dark-500 dark:text-dark-400">
-                Choose your default short link domain
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="p-6">
-          <div className="flex items-center justify-between p-4 bg-dark-50 dark:bg-dark-800 rounded-xl">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center">
-                <span className="text-white font-bold text-sm">M</span>
-              </div>
-              <div>
-                <p className="font-medium text-dark-900 dark:text-white">mdl.cc</p>
-                <p className="text-xs text-dark-500 dark:text-dark-400">Default domain</p>
-              </div>
-            </div>
-            <span className="badge badge-primary">Active</span>
-          </div>
-          <p className="text-sm text-dark-500 dark:text-dark-400 mt-3">
-            Want to use your own domain? Contact us to set up branded links.
-          </p>
-        </div>
-      </div>
-
       {/* ── API Access ───────────────────────────────────────────────────────── */}
       <div className="card">
-        <div className="p-6 border-b border-dark-100 dark:border-dark-700">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-              <Key className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-dark-900 dark:text-white">API Access</h2>
-              <p className="text-sm text-dark-500 dark:text-dark-400">
-                Integrate MDL.cc with your applications
-              </p>
-            </div>
-          </div>
-        </div>
+        <SectionHeader
+          icon={Key}
+          iconBg="bg-purple-100 dark:bg-purple-900/30"
+          iconColor="text-purple-600 dark:text-purple-400"
+          title="API Access"
+          subtitle="Integrate MDL.cc with your applications"
+        />
         <div className="p-6 space-y-4">
           <div className="p-4 bg-dark-50 dark:bg-dark-800 rounded-xl">
             <p className="text-sm text-dark-500 dark:text-dark-400 mb-2">API Endpoint</p>
@@ -444,19 +842,13 @@ export default function Settings() {
 
       {/* ── About ────────────────────────────────────────────────────────────── */}
       <div className="card">
-        <div className="p-6 border-b border-dark-100 dark:border-dark-700">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-green-600 dark:text-green-400" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-dark-900 dark:text-white">About MDL.cc</h2>
-              <p className="text-sm text-dark-500 dark:text-dark-400">
-                The middle-point between you and your audience
-              </p>
-            </div>
-          </div>
-        </div>
+        <SectionHeader
+          icon={Shield}
+          iconBg="bg-green-100 dark:bg-green-900/30"
+          iconColor="text-green-600 dark:text-green-400"
+          title="About MDL.cc"
+          subtitle="The middle-point between you and your audience"
+        />
         <div className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -469,9 +861,6 @@ export default function Settings() {
             </div>
           </div>
           <div className="pt-4 border-t border-dark-100 dark:border-dark-700">
-            <p className="text-sm text-dark-600 dark:text-dark-300 mb-4">
-              MDL.cc is built on Cloudflare's global edge network for maximum speed and reliability.
-            </p>
             <div className="flex flex-wrap gap-3">
               <a href="#" className="btn btn-secondary btn-sm">
                 Privacy Policy <ExternalLink className="w-3 h-3" />

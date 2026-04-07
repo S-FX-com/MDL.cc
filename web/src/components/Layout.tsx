@@ -14,6 +14,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import CreateLinkModal from './CreateLinkModal';
 import clsx from 'clsx';
 
@@ -28,12 +29,13 @@ const navigation = [
 
 export default function Layout() {
   const { theme, toggleTheme } = useTheme();
+  const { activeWorkspace } = useWorkspace();
   const [sidebarOpen, setSidebarOpen]   = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [topBarUrl, setTopBarUrl]       = useState('');
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--bg-page, #f8f9fa)' }}>
+    <div className="min-h-screen" style={{ background: theme === 'dark' ? '#181e25' : '#ffffff' }}>
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
@@ -120,24 +122,30 @@ export default function Layout() {
           className="p-4 space-y-3"
           style={{ borderTop: theme === 'dark' ? '1px solid #2d3748' : '1px solid #f2f3f5' }}
         >
-          {/* Workspace chip */}
-          <div
-            className="flex items-center gap-2 px-3 py-2 rounded-xl"
+          {/* Workspace chip — click to open Settings */}
+          <NavLink
+            to="/settings"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl transition-colors"
             style={{ background: theme === 'dark' ? '#1e2633' : '#f0f0f0' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#2d3748' : '#e5e7eb'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#1e2633' : '#f0f0f0'; }}
           >
             <div
               className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
               style={{ background: '#1456f0' }}
             >
-              <span className="text-white font-bold text-xs">S</span>
+              <span className="text-white font-bold text-xs">
+                {activeWorkspace?.name?.[0]?.toUpperCase() ?? 'W'}
+              </span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold truncate" style={{ color: theme === 'dark' ? '#f0f0f0' : '#181e25' }}>
-                SFX
+                {activeWorkspace?.name ?? 'Workspace'}
               </p>
               <p className="text-xs" style={{ color: '#8e8e93' }}>Workspace</p>
             </div>
-          </div>
+          </NavLink>
 
           {/* Theme toggle */}
           <button
