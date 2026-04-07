@@ -14,7 +14,7 @@ id = "2ab532525fdf4666ae06b7427bde1b02"
 [[d1_databases]]
 binding = "DB"
 database_name = "mdl-db"
-database_id = "mdl-database-id"
+database_id = "15d827a8-567e-4e2f-ad83-fff909e9b63c"
 
 # Environment variables
 [vars]
