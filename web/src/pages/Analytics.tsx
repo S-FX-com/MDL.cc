@@ -10,8 +10,6 @@ import {
 } from 'lucide-react';
 import { stats, DashboardStats } from '../lib/api';
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
