@@ -33,7 +33,7 @@ export default function Layout() {
   const [topBarUrl, setTopBarUrl]       = useState('');
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--bg-page, #f8f9fa)' }}>
+    <div className="min-h-screen" style={{ background: theme === 'dark' ? '#181e25' : '#ffffff' }}>
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
