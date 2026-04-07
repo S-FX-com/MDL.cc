@@ -34,8 +34,9 @@ ENVIRONMENT = "development"
 # zone_name = "mdl.cc"
 
 # Static assets for the web app
-[site]
-bucket = "./web/dist"
+[assets]
+binding = "ASSETS"
+directory = "./web/dist"
 
 # Build configuration
 [build]
