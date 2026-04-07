@@ -2,183 +2,375 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom base styles */
+/* ────────────────────────────────────────────────────────────────────────────
+   Minimax Design System — MDL.cc
+   Primary font: DM Sans (UI) · Outfit (display) · Poppins (feature)
+   Brand blue #1456f0 · Near-black text #222222 · Dark bg #181e25
+   ──────────────────────────────────────────────────────────────────────────── */
+
 @layer base {
   html {
     @apply scroll-smooth;
   }
 
   body {
-    @apply bg-white text-dark-900 antialiased;
-    @apply dark:bg-dark-900 dark:text-dark-50;
-    @apply transition-colors duration-200;
+    /* Light: pure white dominant (Minimax principle) */
+    background-color: #ffffff;
+    color: #222222;
+    font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
-  /* Custom scrollbar for dark mode */
-  ::-webkit-scrollbar {
-    @apply w-2 h-2;
+  /* Dark mode: Minimax charcoal surface */
+  .dark body {
+    background-color: #181e25;
+    color: #f0f0f0;
   }
 
-  ::-webkit-scrollbar-track {
-    @apply bg-transparent;
-  }
+  /* Scrollbar */
+  ::-webkit-scrollbar        { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track  { background: transparent; }
+  ::-webkit-scrollbar-thumb  { background: #d1d5db; border-radius: 9999px; }
+  .dark ::-webkit-scrollbar-thumb { background: #334155; }
+  ::-webkit-scrollbar-thumb:hover { background: #8e8e93; }
 
-  ::-webkit-scrollbar-thumb {
-    @apply bg-dark-300 dark:bg-dark-600 rounded-full;
+  /* Headings — Outfit display font */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: Outfit, "DM Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 600;
+    line-height: 1.25;
+    color: #181e25;
   }
-
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-dark-400 dark:bg-dark-500;
+  .dark h1, .dark h2, .dark h3, .dark h4 {
+    color: #f0f0f0;
   }
 }
 
-/* Custom component styles */
+/* ────────────────────────────────────────────────────────────────────────────
+   Component Layer — Minimax-styled classes
+   ──────────────────────────────────────────────────────────────────────────── */
+
 @layer components {
-  /* Input styles */
+
+  /* ── Inputs ─────────────────────────────────────────────────────────────── */
   .input {
-    @apply w-full px-4 py-3 rounded-lg border border-dark-200 dark:border-dark-700;
-    @apply bg-white dark:bg-dark-800;
-    @apply text-dark-900 dark:text-dark-50;
-    @apply placeholder:text-dark-400 dark:placeholder:text-dark-500;
-    @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
-    @apply transition-all duration-200;
+    width: 100%;
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1.5px solid #e5e7eb;
+    background: #ffffff;
+    color: #222222;
+    font-family: "DM Sans", sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    outline: none;
+  }
+  .input::placeholder { color: #8e8e93; }
+  .input:focus {
+    border-color: #1456f0;
+    box-shadow: 0 0 0 3px rgba(20, 86, 240, 0.12);
   }
 
-  .input-lg {
-    @apply py-4 text-lg;
+  .dark .input {
+    background: #222831;
+    border-color: #334155;
+    color: #f0f0f0;
+  }
+  .dark .input::placeholder { color: #45515e; }
+  .dark .input:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
   }
 
-  /* Button styles */
+  /* ── Buttons ────────────────────────────────────────────────────────────── */
+
+  /* Base */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg;
-    @apply font-medium transition-all duration-200;
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
-    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: "DM Sans", sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    outline: none;
+    border: none;
+    white-space: nowrap;
+    text-decoration: none;
   }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn:focus-visible { box-shadow: 0 0 0 3px rgba(20, 86, 240, 0.25); }
 
+  /* Primary — Minimax "Pill Primary Dark": #181e25 bg, white text */
   .btn-primary {
-    @apply bg-primary-500 text-white;
-    @apply hover:bg-primary-600 active:bg-primary-700;
-    @apply focus:ring-primary-500;
+    background: #181e25;
+    color: #ffffff;
+    border-radius: 8px;
+    box-shadow: rgba(0, 0, 0, 0.12) 0px 2px 8px;
   }
+  .btn-primary:hover:not(:disabled) {
+    background: #1456f0;
+    box-shadow: rgba(20, 86, 240, 0.25) 0px 4px 12px;
+  }
+  .btn-primary:active:not(:disabled) { background: #2563eb; }
 
+  /* Secondary — Minimax "Secondary Light": #f0f0f0 bg, #333 text */
   .btn-secondary {
-    @apply bg-dark-100 text-dark-700 dark:bg-dark-700 dark:text-dark-200;
-    @apply hover:bg-dark-200 dark:hover:bg-dark-600;
-    @apply focus:ring-dark-400;
+    background: #f0f0f0;
+    color: #333333;
   }
+  .btn-secondary:hover:not(:disabled) { background: #e5e7eb; }
+  .btn-secondary:active:not(:disabled) { background: #d1d5db; }
 
+  .dark .btn-secondary {
+    background: #2d3748;
+    color: #e2e8f0;
+  }
+  .dark .btn-secondary:hover:not(:disabled) { background: #334155; }
+
+  /* Ghost */
   .btn-ghost {
-    @apply bg-transparent text-dark-600 dark:text-dark-300;
-    @apply hover:bg-dark-100 dark:hover:bg-dark-800;
-    @apply focus:ring-dark-400;
+    background: transparent;
+    color: #45515e;
   }
+  .btn-ghost:hover:not(:disabled) { background: #f0f0f0; color: #222222; }
+  .dark .btn-ghost { color: #8e8e93; }
+  .dark .btn-ghost:hover:not(:disabled) { background: #2d3748; color: #f0f0f0; }
 
+  /* Danger */
   .btn-danger {
-    @apply bg-red-500 text-white;
-    @apply hover:bg-red-600 active:bg-red-700;
-    @apply focus:ring-red-500;
+    background: #ef4444;
+    color: #ffffff;
+    box-shadow: rgba(239, 68, 68, 0.2) 0px 2px 8px;
   }
+  .btn-danger:hover:not(:disabled) { background: #dc2626; }
 
-  .btn-lg {
-    @apply px-6 py-3 text-lg;
-  }
+  /* Pill variant */
+  .btn-pill { border-radius: 9999px !important; }
 
-  .btn-sm {
-    @apply px-3 py-1.5 text-sm;
-  }
+  /* Sizes */
+  .btn-lg { padding: 13px 28px; font-size: 15px; border-radius: 10px; }
+  .btn-sm { padding: 6px 14px;  font-size: 13px; font-weight: 600; }
+  .btn-xs { padding: 4px 10px;  font-size: 12px; font-weight: 600; }
 
-  /* Card styles */
+  /* ── Cards ──────────────────────────────────────────────────────────────── */
+
+  /* Standard card: white bg, 16px radius, soft shadow */
   .card {
-    @apply bg-white dark:bg-dark-800 rounded-xl;
-    @apply border border-dark-100 dark:border-dark-700;
-    @apply shadow-sm;
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #f2f3f5;
+    box-shadow: rgba(0, 0, 0, 0.08) 0px 4px 6px;
+  }
+  .dark .card {
+    background: #1e2633;
+    border-color: #2d3748;
+    box-shadow: rgba(0, 0, 0, 0.24) 0px 4px 6px;
   }
 
+  /* Featured card — brand purple glow */
+  .card-featured {
+    background: #ffffff;
+    border-radius: 20px;
+    border: 1px solid #f2f3f5;
+    box-shadow: rgba(44, 30, 116, 0.16) 0px 0px 15px;
+  }
+  .dark .card-featured {
+    background: #1e2633;
+    border-color: #2d3748;
+  }
+
+  /* Hover elevation */
   .card-hover {
-    @apply hover:shadow-md hover:border-dark-200 dark:hover:border-dark-600;
-    @apply transition-all duration-200;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .card-hover:hover {
+    box-shadow: rgba(36, 36, 36, 0.08) 0px 12px 16px -4px;
+    transform: translateY(-1px);
   }
 
-  /* Badge styles */
+  /* ── Badges ─────────────────────────────────────────────────────────────── */
   .badge {
-    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 9999px;
+    font-family: "DM Sans", sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
   }
 
   .badge-primary {
-    @apply bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300;
+    background: #eef2ff;
+    color: #1456f0;
+  }
+  .dark .badge-primary {
+    background: rgba(20, 86, 240, 0.15);
+    color: #60a5fa;
   }
 
   .badge-gray {
-    @apply bg-dark-100 text-dark-600 dark:bg-dark-700 dark:text-dark-300;
+    background: #f0f0f0;
+    color: #45515e;
+  }
+  .dark .badge-gray {
+    background: #2d3748;
+    color: #94a3b8;
   }
 
-  /* Link table row */
-  .link-row {
-    @apply flex items-center gap-4 p-4 border-b border-dark-100 dark:border-dark-700;
-    @apply hover:bg-dark-50 dark:hover:bg-dark-800/50;
-    @apply transition-colors duration-150;
+  .badge-green {
+    background: #e8ffea;
+    color: #16a34a;
   }
 
-  /* Sidebar navigation */
+  /* ── Sidebar navigation ─────────────────────────────────────────────────── */
   .nav-item {
-    @apply flex items-center gap-3 px-3 py-2 rounded-lg;
-    @apply text-dark-600 dark:text-dark-400;
-    @apply hover:bg-dark-100 dark:hover:bg-dark-800;
-    @apply hover:text-dark-900 dark:hover:text-dark-100;
-    @apply transition-colors duration-150;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 9999px;        /* Minimax pill nav */
+    font-family: "DM Sans", sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #45515e;
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease;
   }
+  .nav-item:hover { background: #f0f0f0; color: #181e25; }
+  .dark .nav-item { color: #8e8e93; }
+  .dark .nav-item:hover { background: #2d3748; color: #f0f0f0; }
 
+  /* Active — filled pill with brand blue tint */
   .nav-item-active {
-    @apply bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400;
-    @apply hover:bg-primary-100 dark:hover:bg-primary-900/30;
+    background: #eef2ff !important;
+    color: #1456f0 !important;
+    font-weight: 600;
+  }
+  .dark .nav-item-active {
+    background: rgba(20, 86, 240, 0.15) !important;
+    color: #60a5fa !important;
   }
 
-  /* Stat card */
+  /* ── Stats cards ─────────────────────────────────────────────────────────── */
   .stat-card {
-    @apply card p-6;
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #f2f3f5;
+    box-shadow: rgba(0, 0, 0, 0.08) 0px 4px 6px;
+    padding: 24px;
+  }
+  .dark .stat-card {
+    background: #1e2633;
+    border-color: #2d3748;
   }
 
   .stat-value {
-    @apply text-3xl font-bold text-dark-900 dark:text-dark-50;
+    font-family: Outfit, "DM Sans", sans-serif;
+    font-size: 2rem;
+    font-weight: 600;
+    color: #181e25;
+    line-height: 1.2;
   }
+  .dark .stat-value { color: #f0f0f0; }
 
   .stat-label {
-    @apply text-sm text-dark-500 dark:text-dark-400 mt-1;
+    font-family: "DM Sans", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: #8e8e93;
+    margin-top: 4px;
   }
 
-  /* Modal/Dialog */
+  /* ── Modals ──────────────────────────────────────────────────────────────── */
   .modal-overlay {
-    @apply fixed inset-0 bg-black/50 dark:bg-black/70;
-    @apply flex items-center justify-center p-4 z-50;
-    @apply animate-fade-in;
+    position: fixed;
+    inset: 0;
+    background: rgba(24, 30, 37, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 50;
+    animation: fadeIn 0.2s ease-out;
   }
 
   .modal-content {
-    @apply card p-6 w-full max-w-md;
-    @apply animate-scale-in;
+    background: #ffffff;
+    border-radius: 20px;
+    border: 1px solid #f2f3f5;
+    box-shadow: rgba(44, 30, 116, 0.16) 0px 0px 30px;
+    padding: 28px;
+    width: 100%;
+    max-width: 28rem;
+    animation: scaleIn 0.2s ease-out;
+  }
+  .dark .modal-content {
+    background: #1e2633;
+    border-color: #2d3748;
   }
 
-  /* Tooltip */
-  .tooltip {
-    @apply absolute z-50 px-2 py-1 text-xs rounded;
-    @apply bg-dark-900 text-white dark:bg-dark-700;
-    @apply pointer-events-none opacity-0;
-    @apply transition-opacity duration-150;
+  /* ── Link table row ──────────────────────────────────────────────────────── */
+  .link-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border-bottom: 1px solid #f2f3f5;
+    transition: background 0.12s ease;
   }
+  .link-row:hover { background: #fafafa; }
+  .dark .link-row { border-color: #2d3748; }
+  .dark .link-row:hover { background: rgba(255,255,255,0.03); }
 
-  .tooltip-visible {
-    @apply opacity-100;
+  /* ── Glass surface ────────────────────────────────────────────────────────── */
+  .glass {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .dark .glass {
+    background: rgba(30, 38, 51, 0.85);
+    backdrop-filter: blur(12px);
   }
 }
 
-/* Custom utilities */
+/* ────────────────────────────────────────────────────────────────────────────
+   Utilities
+   ──────────────────────────────────────────────────────────────────────────── */
+
 @layer utilities {
+  /* Gradient text — brand blue */
   .text-gradient {
-    @apply bg-gradient-to-r from-primary-500 to-primary-400 bg-clip-text text-transparent;
+    background: linear-gradient(135deg, #1456f0, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
-  .glass {
-    @apply bg-white/80 dark:bg-dark-800/80 backdrop-blur-md;
-  }
+  /* Brand purple glow shadow */
+  .shadow-brand { box-shadow: rgba(44, 30, 116, 0.16) 0px 0px 15px; }
+  .shadow-soft  { box-shadow: rgba(0, 0, 0, 0.08) 0px 4px 6px; }
+
+  /* Outfit display font utility */
+  .font-display { font-family: Outfit, "DM Sans", sans-serif; }
+  .font-feature { font-family: Poppins, "DM Sans", sans-serif; }
+
+  /* Pill radius */
+  .rounded-pill { border-radius: 9999px !important; }
 }

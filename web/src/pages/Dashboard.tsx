@@ -5,152 +5,199 @@ import { stats, DashboardStats } from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, parseISO } from 'date-fns';
 
+// Minimax-style stat accent colors
+const STATS = [
+  {
+    label: 'Active Links',
+    badge: 'Total',
+    icon: Link2,
+    key: 'total_links' as const,
+    iconBg: '#eef2ff',
+    iconColor: '#1456f0',
+  },
+  {
+    label: 'Total Clicks',
+    badge: 'All Time',
+    icon: MousePointerClick,
+    key: 'total_clicks' as const,
+    iconBg: '#eff6ff',
+    iconColor: '#3b82f6',
+  },
+  {
+    label: 'Clicks Today',
+    badge: 'Today',
+    icon: TrendingUp,
+    key: 'today_clicks' as const,
+    iconBg: '#e8ffea',
+    iconColor: '#16a34a',
+  },
+];
+
 export default function Dashboard() {
   const [data, setData] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadStats();
-  }, []);
+  useEffect(() => { loadStats(); }, []);
 
   const loadStats = async () => {
     setLoading(true);
     const response = await stats.dashboard();
-    if (response.success && response.data) {
-      setData(response.data);
-    }
+    if (response.success && response.data) setData(response.data);
     setLoading(false);
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+        <div
+          className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+          style={{ borderColor: '#1456f0', borderTopColor: 'transparent' }}
+        />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* ── Page header ───────────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-2xl font-bold text-dark-900 dark:text-white">Dashboard</h1>
-        <p className="text-dark-500 dark:text-dark-400 mt-1">
-          Welcome to MDL.cc - the middle-point between you and your audience
+        <h1 className="font-display text-2xl font-semibold" style={{ color: '#181e25' }}>
+          Dashboard
+        </h1>
+        <p className="text-sm mt-1" style={{ color: '#8e8e93', fontFamily: '"DM Sans", sans-serif' }}>
+          Welcome to MDL.cc — the middle-point between you and your audience
         </p>
       </div>
 
-      {/* Stats Cards */}
+      {/* ── Stat cards ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="stat-card">
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-              <Link2 className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+        {STATS.map(({ label, badge, icon: Icon, key, iconBg, iconColor }) => (
+          <div key={key} className="stat-card card-hover">
+            <div className="flex items-center justify-between mb-4">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: iconBg }}
+              >
+                <Icon className="w-5 h-5" style={{ color: iconColor }} />
+              </div>
+              <span
+                className="badge"
+                style={{ background: '#f0f0f0', color: '#45515e', fontSize: '11px', fontWeight: 600 }}
+              >
+                {badge}
+              </span>
             </div>
-            <span className="badge badge-primary">Total</span>
+            <div className="stat-value">{(data?.[key] ?? 0).toLocaleString()}</div>
+            <div className="stat-label">{label}</div>
           </div>
-          <div className="stat-value mt-4">{data?.total_links.toLocaleString() || 0}</div>
-          <div className="stat-label">Active Links</div>
-        </div>
-
-        <div className="stat-card">
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-              <MousePointerClick className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <span className="badge badge-gray">All Time</span>
-          </div>
-          <div className="stat-value mt-4">{data?.total_clicks.toLocaleString() || 0}</div>
-          <div className="stat-label">Total Clicks</div>
-        </div>
-
-        <div className="stat-card">
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
-            </div>
-            <span className="badge badge-primary">Today</span>
-          </div>
-          <div className="stat-value mt-4">{data?.today_clicks.toLocaleString() || 0}</div>
-          <div className="stat-label">Clicks Today</div>
-        </div>
+        ))}
       </div>
 
-      {/* Charts & Lists */}
+      {/* ── Charts & lists ────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Clicks Chart */}
+        {/* Clicks over time */}
         <div className="card p-6">
-          <h3 className="font-semibold text-dark-900 dark:text-white mb-4">Clicks Over Time</h3>
+          <h3
+            className="font-display font-semibold mb-4"
+            style={{ fontSize: '15px', color: '#181e25' }}
+          >
+            Clicks Over Time
+          </h3>
           <div className="h-64">
             {data?.weekly_clicks && data.weekly_clicks.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.weekly_clicks}>
                   <XAxis
                     dataKey="date"
-                    tickFormatter={(date) => format(parseISO(date), 'EEE')}
-                    stroke="#64748b"
-                    fontSize={12}
+                    tickFormatter={(d) => format(parseISO(d), 'EEE')}
+                    stroke="#d1d5db"
+                    tick={{ fill: '#8e8e93', fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
                   />
-                  <YAxis stroke="#64748b" fontSize={12} />
+                  <YAxis
+                    stroke="#d1d5db"
+                    tick={{ fill: '#8e8e93', fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={32}
+                  />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: 'var(--tooltip-bg, #1e293b)',
+                      background: '#181e25',
                       border: 'none',
-                      borderRadius: '8px',
-                      color: '#f8fafc',
+                      borderRadius: '10px',
+                      color: '#f0f0f0',
+                      fontSize: '12px',
+                      padding: '8px 12px',
+                      boxShadow: 'rgba(44, 30, 116, 0.16) 0px 8px 20px',
                     }}
-                    labelFormatter={(date) => format(parseISO(date as string), 'MMM d, yyyy')}
+                    labelFormatter={(d) => format(parseISO(d as string), 'MMM d, yyyy')}
                   />
                   <Line
                     type="monotone"
                     dataKey="count"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    dot={{ fill: '#10b981', strokeWidth: 0 }}
-                    activeDot={{ r: 6, fill: '#10b981' }}
+                    stroke="#1456f0"
+                    strokeWidth={2.5}
+                    dot={false}
+                    activeDot={{ r: 5, fill: '#1456f0', strokeWidth: 0 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-dark-400 dark:text-dark-500">
+              <div className="flex items-center justify-center h-full text-sm" style={{ color: '#8e8e93' }}>
                 No click data yet
               </div>
             )}
           </div>
         </div>
 
-        {/* Recent Links */}
-        <div className="card">
-          <div className="flex items-center justify-between p-4 border-b border-dark-100 dark:border-dark-700">
-            <h3 className="font-semibold text-dark-900 dark:text-white">Recent Links</h3>
-            <Link to="/links" className="text-sm text-primary-500 hover:text-primary-600 flex items-center gap-1">
-              View all <ArrowUpRight className="w-4 h-4" />
+        {/* Recent links */}
+        <div className="card overflow-hidden">
+          <div
+            className="flex items-center justify-between px-5 py-4"
+            style={{ borderBottom: '1px solid #f2f3f5' }}
+          >
+            <h3 className="font-display font-semibold" style={{ fontSize: '15px', color: '#181e25' }}>
+              Recent Links
+            </h3>
+            <Link
+              to="/links"
+              className="flex items-center gap-1 text-xs font-semibold"
+              style={{ color: '#1456f0' }}
+            >
+              View all <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-          <div className="divide-y divide-dark-100 dark:divide-dark-700">
+          <div>
             {data?.recent_links && data.recent_links.length > 0 ? (
               data.recent_links.map((link) => (
                 <Link
                   key={link.id}
                   to={`/links/${link.id}`}
-                  className="flex items-center justify-between p-4 hover:bg-dark-50 dark:hover:bg-dark-800/50 transition-colors"
+                  className="flex items-center justify-between px-5 py-3.5 transition-colors"
+                  style={{ borderBottom: '1px solid #f8f9fa' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#fafafa'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-dark-900 dark:text-white truncate">
+                    <p className="text-sm font-medium truncate" style={{ color: '#181e25' }}>
                       {link.title || link.short_code}
                     </p>
-                    <p className="text-sm text-primary-500 truncate">mdl.cc/{link.short_code}</p>
+                    <p className="text-xs truncate mt-0.5" style={{ color: '#1456f0' }}>
+                      mdl.cc/{link.short_code}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-4 ml-4">
-                    <span className="text-sm text-dark-500 dark:text-dark-400">
+                  <div className="flex items-center gap-3 ml-4 shrink-0">
+                    <span className="text-xs" style={{ color: '#8e8e93' }}>
                       {link.click_count || 0} clicks
                     </span>
-                    <ExternalLink className="w-4 h-4 text-dark-400" />
+                    <ExternalLink className="w-3.5 h-3.5" style={{ color: '#d1d5db' }} />
                   </div>
                 </Link>
               ))
             ) : (
-              <div className="p-8 text-center text-dark-400 dark:text-dark-500">
+              <div className="p-10 text-center text-sm" style={{ color: '#8e8e93' }}>
                 No links yet. Create your first link!
               </div>
             )}
@@ -158,48 +205,71 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Top Performing Links */}
-      <div className="card">
-        <div className="flex items-center justify-between p-4 border-b border-dark-100 dark:border-dark-700">
-          <h3 className="font-semibold text-dark-900 dark:text-white">Top Performing Links</h3>
+      {/* ── Top performing links ─────────────────────────────────────────── */}
+      <div className="card overflow-hidden">
+        <div
+          className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: '1px solid #f2f3f5' }}
+        >
+          <h3 className="font-display font-semibold" style={{ fontSize: '15px', color: '#181e25' }}>
+            Top Performing Links
+          </h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="text-left text-sm text-dark-500 dark:text-dark-400 border-b border-dark-100 dark:border-dark-700">
-                <th className="p-4 font-medium">Link</th>
-                <th className="p-4 font-medium">Destination</th>
-                <th className="p-4 font-medium text-right">Clicks</th>
+              <tr style={{ borderBottom: '1px solid #f2f3f5' }}>
+                {['Link', 'Destination', 'Clicks'].map((col, i) => (
+                  <th
+                    key={col}
+                    className="px-5 py-3 text-left text-xs font-semibold"
+                    style={{ color: '#8e8e93', textAlign: i === 2 ? 'right' : 'left' }}
+                  >
+                    {col}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-dark-100 dark:divide-dark-700">
+            <tbody>
               {data?.top_links && data.top_links.length > 0 ? (
                 data.top_links.map((link, index) => (
-                  <tr key={link.id} className="hover:bg-dark-50 dark:hover:bg-dark-800/50">
-                    <td className="p-4">
+                  <tr
+                    key={link.id}
+                    style={{ borderBottom: '1px solid #f8f9fa' }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = '#fafafa'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
+                  >
+                    <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <span className="w-6 h-6 rounded-full bg-dark-100 dark:bg-dark-700 flex items-center justify-center text-sm font-medium text-dark-600 dark:text-dark-400">
+                        <span
+                          className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
+                          style={{ background: '#eef2ff', color: '#1456f0' }}
+                        >
                           {index + 1}
                         </span>
                         <Link
                           to={`/links/${link.id}`}
-                          className="font-medium text-primary-500 hover:text-primary-600"
+                          className="text-sm font-medium"
+                          style={{ color: '#1456f0' }}
                         >
                           mdl.cc/{link.short_code}
                         </Link>
                       </div>
                     </td>
-                    <td className="p-4 text-dark-600 dark:text-dark-300 truncate max-w-xs">
+                    <td
+                      className="px-5 py-3.5 text-sm truncate max-w-xs"
+                      style={{ color: '#45515e' }}
+                    >
                       {link.original_url}
                     </td>
-                    <td className="p-4 text-right font-medium text-dark-900 dark:text-white">
+                    <td className="px-5 py-3.5 text-right text-sm font-semibold" style={{ color: '#181e25' }}>
                       {link.click_count?.toLocaleString() || 0}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={3} className="p-8 text-center text-dark-400 dark:text-dark-500">
+                  <td colSpan={3} className="px-5 py-10 text-center text-sm" style={{ color: '#8e8e93' }}>
                     No data yet
                   </td>
                 </tr>
