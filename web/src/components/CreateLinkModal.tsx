@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, Link2, Copy, Check, ChevronDown, ChevronUp, Zap, Settings2 } from 'lucide-react';
+import { X, Link2, Copy, Check, ChevronDown, ChevronUp, Zap, Settings2, Download } from 'lucide-react';
 import { links, groups as groupsApi, LinkGroup, CreateLinkPayload, Link as LinkType } from '../lib/api';
-import QRCodeDisplay from './QRCodeDisplay';
+import QRCodeDisplay, { useQRDownload } from './QRCodeDisplay';
 import clsx from 'clsx';
 
 interface CreateLinkModalProps {
@@ -29,6 +29,7 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
   const [groups, setGroups] = useState<LinkGroup[]>([]);
   // If opened from the top bar with a URL, start in "confirm" quick mode
   const [quickMode, setQuickMode] = useState<QuickMode | null>(null);
+  const { ref: qrRef, download: downloadQR } = useQRDownload('mdl-cc-qr.svg');
 
   // Load groups
   useEffect(() => {
@@ -142,13 +143,21 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
 
             {/* QR Code preview */}
             <div className="p-4 bg-dark-50 dark:bg-dark-800 rounded-xl flex items-center gap-4">
-              <div className="w-20 h-20 rounded-lg bg-white flex items-center justify-center p-1 shrink-0">
+              <div ref={qrRef} className="w-20 h-20 rounded-lg bg-white flex items-center justify-center p-1 shrink-0">
                 <QRCodeDisplay value={`https://mdl.cc/${createdLink.short_code}`} size={72} />
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="font-medium text-dark-900 dark:text-white">QR Code</p>
                 <p className="text-sm text-dark-500 dark:text-dark-400">Scan to visit your link</p>
               </div>
+              <button
+                onClick={downloadQR}
+                className="btn btn-secondary btn-sm gap-1.5 shrink-0"
+                title="Download QR code as SVG"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download
+              </button>
             </div>
 
             <div className="flex gap-3 pt-2">
