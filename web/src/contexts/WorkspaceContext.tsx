@@ -18,6 +18,7 @@ export interface TeamMember {
   workspaceIds: string[];
   status: 'pending' | 'active';
   invitedAt: string;
+  role?: 'member' | 'admin';
 }
 
 export interface CustomDomain {
@@ -44,7 +45,7 @@ interface WorkspaceContextType {
   addWorkspace: (name: string) => Promise<Workspace>;
   renameWorkspace: (id: string, name: string) => Promise<void>;
   deleteWorkspace: (id: string) => Promise<void>;
-  inviteMemberByEmail: (email: string, workspaceIds: string[]) => Promise<void>;
+  inviteMemberByEmail: (email: string, workspaceIds: string[], role?: 'member' | 'admin') => Promise<void>;
   assignMemberWorkspace: (memberId: string, workspaceId: string, assign: boolean) => void;
   removeMember: (memberId: string) => void;
   addDomain: (domain: string, workspaceId: string) => void;
@@ -221,7 +222,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }, [workspaces, activeWsId, setActiveWorkspaceId]);
 
-  const inviteMemberByEmail = useCallback(async (email: string, workspaceIds: string[]) => {
+  const inviteMemberByEmail = useCallback(async (email: string, workspaceIds: string[], role: 'member' | 'admin' = 'member') => {
     const wsNames = workspaces
       .filter(w => workspaceIds.includes(w.id))
       .map(w => w.name).join(', ');
@@ -229,7 +230,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
     await authFetch('/api/invites', {
       method: 'POST',
-      body: JSON.stringify({ email, workspaceName, inviteCode }),
+      body: JSON.stringify({ email, workspaceName, inviteCode, role }),
     });
 
     const member: TeamMember = {
@@ -238,6 +239,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       workspaceIds,
       status: 'pending',
       invitedAt: new Date().toISOString(),
+      role,
     };
     const updated = [...teamMembers, member];
     setTeamMembers(updated);

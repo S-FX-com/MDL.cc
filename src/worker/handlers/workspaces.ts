@@ -109,3 +109,25 @@ export async function getWorkspaceMembers(wsId: string, request: Request, env: E
 
   return successResponse(members.results);
 }
+
+export async function removeWorkspaceMember(wsId: string, memberId: string, request: Request, env: Env): Promise<Response> {
+  const user = await getAuthUser(request, env);
+  if (!user) return errorResponse('Unauthorized', 401);
+
+  const requester = await env.DB.prepare(
+    `SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?`
+  ).bind(wsId, user.id).first<{ role: string }>();
+  if (!requester || !['owner', 'admin'].includes(requester.role)) return errorResponse('Forbidden', 403);
+
+  // Prevent removing the owner
+  const target = await env.DB.prepare(
+    `SELECT role FROM workspace_members WHERE id = ? AND workspace_id = ?`
+  ).bind(memberId, wsId).first<{ role: string }>();
+  if (!target) return errorResponse('Member not found', 404);
+  if (target.role === 'owner') return errorResponse('Cannot remove the workspace owner', 403);
+
+  await env.DB.prepare(`DELETE FROM workspace_members WHERE id = ? AND workspace_id = ?`)
+    .bind(memberId, wsId).run();
+
+  return successResponse(null, 'Member removed');
+}

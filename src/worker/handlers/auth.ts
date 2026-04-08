@@ -39,21 +39,8 @@ export async function register(request: Request, env: Env): Promise<Response> {
      VALUES (?, ?, ?, ?, ?, ?, ?)`
   ).bind(userId, email.toLowerCase().trim(), name.trim(), hash, salt, now, now).run();
 
-  // Create default workspace
-  const wsId = generateId();
-  const wsName = `${name.trim()}'s Workspace`;
-  const wsSlug = `${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${wsId.slice(0, 6)}`;
-
-  await env.DB.prepare(
-    `INSERT INTO workspaces (id, name, slug, owner_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
-  ).bind(wsId, wsName, wsSlug, userId, now, now).run();
-
-  await env.DB.prepare(
-    `INSERT INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)`
-  ).bind(generateId(), wsId, userId, 'owner', now).run();
-
-  // If coming from a workspace, also add as member there
   if (workspace_slug) {
+    // Joining via invite — add to that workspace only, no personal workspace created
     const ws = await env.DB.prepare('SELECT id FROM workspaces WHERE slug = ?')
       .bind(workspace_slug.toLowerCase().trim()).first<{ id: string }>();
     if (ws) {
@@ -61,6 +48,19 @@ export async function register(request: Request, env: Env): Promise<Response> {
         `INSERT OR IGNORE INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)`
       ).bind(generateId(), ws.id, userId, 'member', now).run();
     }
+  } else {
+    // No invite — create a personal workspace
+    const wsId = generateId();
+    const wsName = `${name.trim()}'s Workspace`;
+    const wsSlug = `${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${wsId.slice(0, 6)}`;
+
+    await env.DB.prepare(
+      `INSERT INTO workspaces (id, name, slug, owner_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
+    ).bind(wsId, wsName, wsSlug, userId, now, now).run();
+
+    await env.DB.prepare(
+      `INSERT INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)`
+    ).bind(generateId(), wsId, userId, 'owner', now).run();
   }
 
   const token = await signJWT(

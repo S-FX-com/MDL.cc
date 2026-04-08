@@ -3,6 +3,7 @@
 export interface Env {
   URL_KV: KVNamespace;
   DB: D1Database;
+  ASSETS: Fetcher;
   ENVIRONMENT: string;
   APP_NAME: string;
   APP_TAGLINE: string;

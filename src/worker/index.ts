@@ -19,7 +19,7 @@ import {
   createTag,
 } from './handlers/api';
 import { generateQR, saveQRConfig } from './handlers/qr';
-import { sendInviteEmail, validateInvite, acceptInvite } from './handlers/email';
+import { sendInviteEmail, validateInvite, acceptInvite, getWorkspaceInvitations, cancelInvitation } from './handlers/email';
 import { register, login, getMe, updateProfile } from './handlers/auth';
 import {
   getWorkspaces,
@@ -27,6 +27,7 @@ import {
   updateWorkspace,
   deleteWorkspace,
   getWorkspaceMembers,
+  removeWorkspaceMember,
   lookupWorkspace,
 } from './handlers/workspaces';
 import { errorResponse, jsonResponse } from './utils';
@@ -145,24 +146,19 @@ export default {
         return getWorkspaceMembers(wsMembersMatch[1], request, env);
       }
 
-      // ============ Static Assets & Web App ============
+      const wsMemberMatch = path.match(/^\/api\/workspaces\/([^/]+)\/members\/([^/]+)$/);
+      if (wsMemberMatch && method === 'DELETE') {
+        return removeWorkspaceMember(wsMemberMatch[1], wsMemberMatch[2], request, env);
+      }
 
-      // Serve static assets (handled by Cloudflare Sites/Pages)
-      if (
-        path === '/' ||
-        path.startsWith('/assets/') ||
-        path.endsWith('.js') ||
-        path.endsWith('.css') ||
-        path.endsWith('.ico') ||
-        path.endsWith('.png') ||
-        path.endsWith('.svg')
-      ) {
-        // In production, this would be handled by __STATIC_CONTENT binding
-        // For now, return the app shell for SPA routing
-        if (path === '/' || !path.includes('.')) {
-          return getAppShell(env);
-        }
-        return new Response('Not Found', { status: 404 });
+      const wsInvitesMatch = path.match(/^\/api\/workspaces\/([^/]+)\/invitations$/);
+      if (wsInvitesMatch) {
+        if (method === 'GET') return getWorkspaceInvitations(wsInvitesMatch[1], request, env);
+      }
+
+      const wsInviteCancelMatch = path.match(/^\/api\/workspaces\/([^/]+)\/invitations\/([^/]+)$/);
+      if (wsInviteCancelMatch && method === 'DELETE') {
+        return cancelInvitation(wsInviteCancelMatch[1], wsInviteCancelMatch[2], request, env);
       }
 
       // ============ URL Redirect ============
@@ -181,9 +177,9 @@ export default {
         }
       }
 
-      // SPA fallback - serve app shell for client-side routing
+      // SPA fallback - serve real index.html for client-side routing
       if (method === 'GET' && !path.startsWith('/api/')) {
-        return getAppShell(env);
+        return env.ASSETS.fetch(new Request(new URL('/index.html', request.url).toString()));
       }
 
       return errorResponse('Not Found', 404);
@@ -194,59 +190,3 @@ export default {
   },
 };
 
-// App shell for SPA
-function getAppShell(env: Env): Response {
-  const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${env.APP_NAME} - ${env.APP_TAGLINE}</title>
-  <meta name="description" content="MDL.cc is a fast, reliable URL shortening service. The middle-point between you and your audience.">
-  <meta name="theme-color" content="#10B981">
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0f172a;
-      color: #f8fafc;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .loading {
-      text-align: center;
-    }
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid #1e293b;
-      border-top-color: #10b981;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 1rem;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-  </style>
-</head>
-<body>
-  <div id="root">
-    <div class="loading">
-      <div class="spinner"></div>
-      <p>Loading MDL.cc...</p>
-    </div>
-  </div>
-  <script type="module" src="/assets/index.js"></script>
-</body>
-</html>`;
-
-  return new Response(html, {
-    headers: {
-      'Content-Type': 'text/html',
-      'Cache-Control': 'no-cache',
-    },
-  });
-}

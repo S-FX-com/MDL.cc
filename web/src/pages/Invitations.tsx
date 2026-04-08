@@ -1,31 +1,62 @@
-import { useState } from 'react';
-import { Mail, Link2, Copy, Check, RefreshCw, Plus, Trash2, Clock, UserCheck } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Mail, Link2, Copy, Check, Plus, Trash2, Clock, UserCheck, RefreshCw } from 'lucide-react';
 import { useWorkspace } from '../contexts/WorkspaceContext';
-import { useAuth } from '../contexts/AuthContext';
 import clsx from 'clsx';
 
+interface PendingInvite {
+  id: string;
+  email: string;
+  role: 'member' | 'admin';
+  created_at: string;
+  invited_by_name?: string;
+}
+
 export default function Invitations() {
-  useAuth();
-  const {
-    activeWorkspace, teamMembers,
-    inviteCode, inviteMemberByEmail, removeMember, regenerateInviteCode,
-  } = useWorkspace();
+  const { activeWorkspace, inviteMemberByEmail, inviteCode, regenerateInviteCode } = useWorkspace();
 
   const [tab, setTab]         = useState<'email' | 'link'>('email');
   const [email, setEmail]     = useState('');
+  const [role, setRole]       = useState<'member' | 'admin'>('member');
   const [sending, setSending] = useState(false);
   const [status, setStatus]   = useState<'idle' | 'sent' | 'error'>('idle');
   const [copied, setCopied]   = useState(false);
 
+  const [pending, setPending]   = useState<PendingInvite[]>([]);
+  const [loadingList, setLoadingList] = useState(false);
+
+  const fetchPending = useCallback(async () => {
+    if (!activeWorkspace?.id) return;
+    setLoadingList(true);
+    try {
+      const token = localStorage.getItem('mdl-auth-token');
+      const res = await fetch(`/api/workspaces/${activeWorkspace.id}/invitations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json() as { success: boolean; data: PendingInvite[] };
+      if (data.success) setPending(data.data ?? []);
+    } finally {
+      setLoadingList(false);
+    }
+  }, [activeWorkspace?.id]);
+
+  // Fetch on mount + active workspace change + auto-refresh every 15s
+  useEffect(() => {
+    fetchPending();
+    const interval = setInterval(fetchPending, 15000);
+    return () => clearInterval(interval);
+  }, [fetchPending]);
+
   const handleInvite = async () => {
-    if (!email.trim() || !email.includes('@') || sending) return;
+    if (!email.trim() || !email.includes('@') || sending || !activeWorkspace) return;
     setSending(true);
     setStatus('idle');
     try {
-      await inviteMemberByEmail(email.trim(), [activeWorkspace?.id ?? ''].filter(Boolean));
+      await inviteMemberByEmail(email.trim(), [activeWorkspace.id], role);
       setEmail('');
       setStatus('sent');
       setTimeout(() => setStatus('idle'), 3000);
+      // Refresh list after sending
+      setTimeout(fetchPending, 500);
     } catch {
       setStatus('error');
       setTimeout(() => setStatus('idle'), 3000);
@@ -34,14 +65,21 @@ export default function Invitations() {
     }
   };
 
+  const cancelInvite = async (inviteId: string, inviteEmail: string) => {
+    if (!activeWorkspace || !confirm(`Cancel invite for ${inviteEmail}?`)) return;
+    const token = localStorage.getItem('mdl-auth-token');
+    await fetch(`/api/workspaces/${activeWorkspace.id}/invitations/${inviteId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setPending(prev => prev.filter(i => i.id !== inviteId));
+  };
+
   const copyLink = async () => {
     await navigator.clipboard.writeText(`https://mdl.cc/join?code=${inviteCode}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const pending = teamMembers.filter(m => m.status === 'pending');
-  const active  = teamMembers.filter(m => m.status === 'active');
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -97,6 +135,15 @@ export default function Invitations() {
                   className="input flex-1"
                   onKeyDown={e => e.key === 'Enter' && handleInvite()}
                 />
+                <select
+                  value={role}
+                  onChange={e => setRole(e.target.value as 'member' | 'admin')}
+                  className="input"
+                  style={{ width: 'auto', paddingRight: '32px' }}
+                >
+                  <option value="member">Member</option>
+                  <option value="admin">Admin</option>
+                </select>
                 <button onClick={handleInvite} disabled={sending} className="btn btn-primary gap-1.5">
                   <Plus className="w-4 h-4" />
                   {sending ? 'Sending…' : 'Send Invite'}
@@ -111,7 +158,6 @@ export default function Invitations() {
               {status === 'error' && (
                 <p className="text-xs text-red-400">Failed to send. Please try again.</p>
               )}
-
             </div>
           ) : (
             <div className="space-y-3">
@@ -144,35 +190,55 @@ export default function Invitations() {
       </div>
 
       {/* Pending invitations */}
-      {pending.length > 0 && (
-        <div className="card">
-          <div className="px-6 py-4 border-b border-dark-100 dark:border-dark-700 flex items-center gap-2">
+      <div className="card">
+        <div className="px-6 py-4 border-b border-dark-100 dark:border-dark-700 flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-500" />
             <h2 className="font-semibold text-dark-900 dark:text-white">
               Pending <span className="text-dark-400 font-normal">({pending.length})</span>
             </h2>
           </div>
+          <button
+            onClick={fetchPending}
+            disabled={loadingList}
+            className="p-1.5 rounded-lg hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className={clsx('w-4 h-4 text-dark-400', loadingList && 'animate-spin')} />
+          </button>
+        </div>
+
+        {pending.length === 0 ? (
+          <div className="px-6 py-8 text-center">
+            <p className="text-sm text-dark-400">No pending invitations</p>
+          </div>
+        ) : (
           <div className="divide-y divide-dark-100 dark:divide-dark-700">
-            {pending.map(m => (
-              <div key={m.id} className="flex items-center justify-between px-6 py-4">
+            {pending.map(inv => (
+              <div key={inv.id} className="flex items-center justify-between px-6 py-4">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
                     <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
-                      {m.email[0].toUpperCase()}
+                      {inv.email[0].toUpperCase()}
                     </span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-dark-900 dark:text-white">{m.email}</p>
+                    <p className="text-sm font-medium text-dark-900 dark:text-white">{inv.email}</p>
                     <p className="text-xs text-dark-400">
-                      Invited {new Date(m.invitedAt).toLocaleDateString()}
+                      Invited {new Date(inv.created_at).toLocaleDateString()}
+                      {inv.invited_by_name && ` · by ${inv.invited_by_name}`}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="badge badge-gray">Pending</span>
+                  {inv.role === 'admin' && (
+                    <span className="badge badge-blue">Admin</span>
+                  )}
                   <button
-                    onClick={() => { if (confirm(`Cancel invite for ${m.email}?`)) removeMember(m.id); }}
+                    onClick={() => cancelInvite(inv.id, inv.email)}
                     className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
+                    title="Cancel invitation"
                   >
                     <Trash2 className="w-4 h-4 text-red-400" />
                   </button>
@@ -180,46 +246,65 @@ export default function Invitations() {
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Active members */}
-      {active.length > 0 && (
-        <div className="card">
-          <div className="px-6 py-4 border-b border-dark-100 dark:border-dark-700 flex items-center gap-2">
-            <UserCheck className="w-4 h-4 text-emerald-500" />
-            <h2 className="font-semibold text-dark-900 dark:text-white">
-              Members <span className="text-dark-400 font-normal">({active.length})</span>
-            </h2>
-          </div>
-          <div className="divide-y divide-dark-100 dark:divide-dark-700">
-            {active.map(m => (
-              <div key={m.id} className="flex items-center justify-between px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
-                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                      {(m.name || m.email)[0].toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-dark-900 dark:text-white">{m.name || m.email}</p>
-                    <p className="text-xs text-dark-400">{m.email}</p>
-                  </div>
-                </div>
-                <span className="badge badge-green">Active</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <ActiveMembers workspaceId={activeWorkspace?.id} />
+    </div>
+  );
+}
 
-      {teamMembers.length === 0 && (
-        <div className="card p-12 text-center">
-          <Mail className="w-10 h-10 mx-auto mb-3 text-dark-300 dark:text-dark-600" />
-          <p className="font-medium text-dark-700 dark:text-dark-300">No invitations yet</p>
-          <p className="text-sm text-dark-400 mt-1">Invite your first team member above</p>
-        </div>
-      )}
+function ActiveMembers({ workspaceId }: { workspaceId?: string }) {
+  const [members, setMembers] = useState<{ id: string; user_id: string; email: string; name?: string; role: string; joined_at: string }[]>([]);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    const token = localStorage.getItem('mdl-auth-token');
+    fetch(`/api/workspaces/${workspaceId}/members`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then((d: { success: boolean; data: typeof members }) => {
+        if (d.success) setMembers(d.data ?? []);
+      });
+  }, [workspaceId]);
+
+  if (members.length === 0) return null;
+
+  return (
+    <div className="card">
+      <div className="px-6 py-4 border-b border-dark-100 dark:border-dark-700 flex items-center gap-2">
+        <UserCheck className="w-4 h-4 text-emerald-500" />
+        <h2 className="font-semibold text-dark-900 dark:text-white">
+          Members <span className="text-dark-400 font-normal">({members.length})</span>
+        </h2>
+      </div>
+      <div className="divide-y divide-dark-100 dark:divide-dark-700">
+        {members.map(m => (
+          <div key={m.id} className="flex items-center justify-between px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  {(m.name || m.email)[0].toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-dark-900 dark:text-white">{m.name || m.email}</p>
+                <p className="text-xs text-dark-400">{m.email}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="badge badge-green">Active</span>
+              {m.role !== 'member' && (
+                <span className={clsx('badge', m.role === 'owner' ? 'badge-gray' : 'badge-blue')}>
+                  {m.role}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

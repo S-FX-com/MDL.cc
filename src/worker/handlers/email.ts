@@ -8,6 +8,7 @@ interface SendInviteRequest {
   email: string;
   workspaceName: string;
   inviterName?: string;
+  role?: 'member' | 'admin';
 }
 
 export async function sendInviteEmail(request: Request, env: Env): Promise<Response> {
@@ -25,9 +26,10 @@ export async function sendInviteEmail(request: Request, env: Env): Promise<Respo
     return errorResponse('Invalid request body', 400);
   }
 
-  const { email, workspaceName } = body;
+  const { email, workspaceName, role } = body;
   if (!email || !workspaceName) return errorResponse('email and workspaceName are required', 400);
   if (!email.includes('@')) return errorResponse('Invalid email address', 400);
+  const inviteRole = role === 'admin' ? 'admin' : 'member';
 
   // Find workspace by name that the inviter owns/admins
   const workspace = await env.DB.prepare(`
@@ -46,8 +48,8 @@ export async function sendInviteEmail(request: Request, env: Env): Promise<Respo
   // Store invitation in D1
   await env.DB.prepare(`
     INSERT OR REPLACE INTO invitations (id, workspace_id, email, role, invited_by, token, status, expires_at)
-    VALUES (?, ?, ?, 'member', ?, ?, 'pending', ?)
-  `).bind(generateId(), workspace.id, email.toLowerCase(), user.id, token, expiresAt).run();
+    VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)
+  `).bind(generateId(), workspace.id, email.toLowerCase(), inviteRole, user.id, token, expiresAt).run();
 
   const appUrl = env.ENVIRONMENT === 'production' ? 'https://mdl.cc' : 'http://localhost:5173';
   const inviteLink = `${appUrl}/join?code=${token}`;
@@ -99,9 +101,13 @@ export async function validateInvite(request: Request, env: Env): Promise<Respon
   if (inv.status === 'accepted') return jsonResponse({ success: false, valid: false, error: 'Invitation already used' });
   if (new Date(inv.expires_at) < new Date()) return jsonResponse({ success: false, valid: false, error: 'Invitation has expired' });
 
+  const existingUser = await env.DB.prepare('SELECT id FROM users WHERE email = ?')
+    .bind(inv.email.toLowerCase()).first<{ id: string }>();
+
   return jsonResponse({
     success: true,
     valid: true,
+    user_exists: !!existingUser,
     invitation: {
       email: inv.email,
       workspace_id: inv.workspace_id,
@@ -122,9 +128,9 @@ export async function acceptInvite(request: Request, env: Env): Promise<Response
   if (!body.code) return errorResponse('code is required', 400);
 
   const inv = await env.DB.prepare(`
-    SELECT i.id, i.workspace_id, i.status, i.expires_at
+    SELECT i.id, i.workspace_id, i.role, i.status, i.expires_at
     FROM invitations i WHERE i.token = ?
-  `).bind(body.code).first<{ id: string; workspace_id: string; status: string; expires_at: string }>();
+  `).bind(body.code).first<{ id: string; workspace_id: string; role: string; status: string; expires_at: string }>();
 
   if (!inv) return errorResponse('Invitation not found', 404);
   if (inv.status === 'accepted') return errorResponse('Invitation already used', 409);
@@ -132,11 +138,11 @@ export async function acceptInvite(request: Request, env: Env): Promise<Response
 
   const now = new Date().toISOString();
 
-  // Add user to workspace
+  // Add user to workspace with the role from the invitation
   await env.DB.prepare(`
     INSERT OR IGNORE INTO workspace_members (id, workspace_id, user_id, role, joined_at)
-    VALUES (?, ?, ?, 'member', ?)
-  `).bind(generateId(), inv.workspace_id, user.id, now).run();
+    VALUES (?, ?, ?, ?, ?)
+  `).bind(generateId(), inv.workspace_id, user.id, inv.role || 'member', now).run();
 
   // Mark invitation as accepted
   await env.DB.prepare(`UPDATE invitations SET status = 'accepted' WHERE id = ?`).bind(inv.id).run();
@@ -145,6 +151,46 @@ export async function acceptInvite(request: Request, env: Env): Promise<Response
     .bind(inv.workspace_id).first();
 
   return successResponse({ workspace }, 'Invitation accepted');
+}
+
+// ── List workspace invitations (requires member access) ───────────────────────
+
+export async function getWorkspaceInvitations(wsId: string, request: Request, env: Env): Promise<Response> {
+  const user = await getAuthUser(request, env);
+  if (!user) return errorResponse('Unauthorized', 401);
+
+  const membership = await env.DB.prepare(
+    `SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?`
+  ).bind(wsId, user.id).first<{ role: string }>();
+  if (!membership) return errorResponse('Forbidden', 403);
+
+  const rows = await env.DB.prepare(`
+    SELECT i.id, i.email, i.role, i.status, i.created_at, i.expires_at,
+           u.name as invited_by_name, u.email as invited_by_email
+    FROM invitations i
+    LEFT JOIN users u ON u.id = i.invited_by
+    WHERE i.workspace_id = ? AND i.status = 'pending' AND i.expires_at > datetime('now')
+    ORDER BY i.created_at DESC
+  `).bind(wsId).all();
+
+  return successResponse(rows.results);
+}
+
+// ── Cancel invitation (owner/admin only) ──────────────────────────────────────
+
+export async function cancelInvitation(wsId: string, invId: string, request: Request, env: Env): Promise<Response> {
+  const user = await getAuthUser(request, env);
+  if (!user) return errorResponse('Unauthorized', 401);
+
+  const membership = await env.DB.prepare(
+    `SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?`
+  ).bind(wsId, user.id).first<{ role: string }>();
+  if (!membership || !['owner', 'admin'].includes(membership.role)) return errorResponse('Forbidden', 403);
+
+  await env.DB.prepare(`DELETE FROM invitations WHERE id = ? AND workspace_id = ?`)
+    .bind(invId, wsId).run();
+
+  return successResponse(null, 'Invitation cancelled');
 }
 
 // ── Email HTML ────────────────────────────────────────────────────────────────
