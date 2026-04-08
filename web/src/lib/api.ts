@@ -53,6 +53,7 @@ export interface CreateLinkPayload {
   title?: string;
   description?: string;
   group_id?: string;
+  domain_id?: string;
   password?: string;
   expires_at?: string;
   tags?: string[];

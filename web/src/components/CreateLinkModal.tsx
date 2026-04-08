@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X, Link2, Copy, Check, ChevronDown, ChevronUp, Zap, Settings2, Download } from 'lucide-react';
 import { links, groups as groupsApi, LinkGroup, CreateLinkPayload, Link as LinkType } from '../lib/api';
 import QRCodeDisplay, { useQRDownload } from './QRCodeDisplay';
@@ -17,7 +17,7 @@ interface CreateLinkModalProps {
 type QuickMode = 'confirm' | 'customize';
 
 export default function CreateLinkModal({ open, onClose, initialUrl = '', onSuccess }: CreateLinkModalProps) {
-  const { activeWorkspaceId, associateLinkWithWorkspace } = useWorkspace();
+  const { activeWorkspaceId, associateLinkWithWorkspace, customDomains, getDefaultDomain } = useWorkspace();
   const [url, setUrl] = useState(initialUrl);
   const [customCode, setCustomCode] = useState('');
   const [title, setTitle] = useState('');
@@ -32,6 +32,14 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
   // If opened from the top bar with a URL, start in "confirm" quick mode
   const [quickMode, setQuickMode] = useState<QuickMode | null>(null);
   const { ref: qrRef, download: downloadQR } = useQRDownload('mdl-cc-qr.svg');
+
+  // Domains available for the active workspace
+  const workspaceDomains = useMemo(
+    () => customDomains.filter(d => d.workspaceId === activeWorkspaceId),
+    [customDomains, activeWorkspaceId]
+  );
+  const defaultDomain = getDefaultDomain(activeWorkspaceId);
+  const [selectedDomainId, setSelectedDomainId] = useState<string>('');
 
   // Load groups
   useEffect(() => {
@@ -58,8 +66,10 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
       setCopied(false);
       // If a URL was pasted into the top bar, show the quick confirm step
       setQuickMode(initialUrl.trim() ? 'confirm' : null);
+      // Default to the workspace's default domain
+      setSelectedDomainId(defaultDomain?.id ?? '');
     }
-  }, [open, initialUrl]);
+  }, [open, initialUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -72,13 +82,19 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
       if (title) payload.title = title;
       if (groupId) payload.group_id = groupId;
       if (password) payload.password = password;
+      if (selectedDomainId) payload.domain_id = selectedDomainId;
 
       const response = await links.create(payload);
 
       if (response.success && response.data) {
         associateLinkWithWorkspace(response.data.id, activeWorkspaceId);
-        setCreatedLink(response.data);
-        onSuccess?.(response.data);
+        // If a custom domain is selected, build the short_url using it
+        const selectedDomain = workspaceDomains.find(d => d.id === selectedDomainId);
+        const linkData = selectedDomain
+          ? { ...response.data, short_url: `https://${selectedDomain.domain}/${response.data.short_code}` }
+          : response.data;
+        setCreatedLink(linkData);
+        onSuccess?.(linkData);
       } else {
         setError(response.error || 'Failed to create link');
       }
@@ -208,7 +224,7 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
           <div className="p-4 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-xl mb-4">
             <p className="text-xs text-dark-500 dark:text-dark-400 mb-1">SHORT LINK (auto-generated):</p>
             <p className="text-lg font-mono font-semibold text-primary-600 dark:text-primary-400">
-              mdl.cc/<span className="opacity-60">••••••</span>
+              {defaultDomain ? defaultDomain.domain : 'mdl.cc'}/<span className="opacity-60">••••••</span>
             </p>
             <p className="text-xs text-dark-400 dark:text-dark-500 mt-1">
               A unique code will be assigned automatically
@@ -292,7 +308,20 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
               Custom Alias (optional)
             </label>
             <div className="flex items-center gap-2">
-              <span className="text-dark-400 dark:text-dark-500 text-sm">mdl.cc/</span>
+              {workspaceDomains.length > 0 ? (
+                <select
+                  value={selectedDomainId}
+                  onChange={(e) => setSelectedDomainId(e.target.value)}
+                  className="input w-auto text-sm text-dark-600 dark:text-dark-300 pr-6"
+                >
+                  <option value="">mdl.cc/</option>
+                  {workspaceDomains.map(d => (
+                    <option key={d.id} value={d.id}>{d.domain}/</option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-dark-400 dark:text-dark-500 text-sm">mdl.cc/</span>
+              )}
               <input
                 type="text"
                 value={customCode}

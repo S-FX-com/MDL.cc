@@ -27,6 +27,7 @@ export interface CustomDomain {
   workspaceId: string;
   verified: boolean;
   addedAt: string;
+  isDefault?: boolean;
 }
 
 interface WorkspaceContextType {
@@ -51,6 +52,8 @@ interface WorkspaceContextType {
   addDomain: (domain: string, workspaceId: string) => void;
   verifyDomain: (id: string) => Promise<boolean>;
   removeDomain: (id: string) => void;
+  setDefaultDomain: (domainId: string, workspaceId: string) => void;
+  getDefaultDomain: (workspaceId: string) => CustomDomain | undefined;
   regenerateInviteCode: () => string;
   associateLinkWithWorkspace: (linkId: string, workspaceId: string) => void;
   reloadWorkspaces: () => Promise<void>;
@@ -59,12 +62,13 @@ interface WorkspaceContextType {
 // ── Storage helpers ──────────────────────────────────────────────────────────
 
 const S = {
-  activeWsId:    'mdl-active-workspace',
-  hasAgency:     'mdl-has-agency',
-  teamMembers:   'mdl-team-members',
-  customDomains: 'mdl-custom-domains',
-  inviteCode:    'mdl-invite-code',
-  linkWorkspaces: 'mdl-link-workspaces',
+  activeWsId:       'mdl-active-workspace',
+  hasAgency:        'mdl-has-agency',
+  teamMembers:      'mdl-team-members',
+  customDomains:    'mdl-custom-domains',
+  inviteCode:       'mdl-invite-code',
+  linkWorkspaces:   'mdl-link-workspaces',
+  defaultDomainIds: 'mdl-default-domain-ids',
 };
 
 function load<T>(key: string, fallback: T): T {
@@ -110,6 +114,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [hasAgency, setHasAgency]         = useState(() => load<boolean>(S.hasAgency, false));
   const [teamMembers, setTeamMembers]     = useState<TeamMember[]>(() => load(S.teamMembers, []));
   const [customDomains, setCustomDomains] = useState<CustomDomain[]>(() => load(S.customDomains, []));
+  const [defaultDomainIds, setDefaultDomainIds] = useState<Record<string, string>>(() => load(S.defaultDomainIds, {}));
   const [linkWorkspaces, setLinkWorkspaces] = useState<Record<string, string>>(() => load(S.linkWorkspaces, {}));
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(true);
   const [inviteCode] = useState<string>(() => {
@@ -275,7 +280,28 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const updated = [...customDomains, d];
     setCustomDomains(updated);
     save(S.customDomains, updated);
+    // Auto-set as default for the workspace if no default exists yet
+    setDefaultDomainIds(prev => {
+      if (prev[workspaceId]) return prev;
+      const next = { ...prev, [workspaceId]: d.id };
+      save(S.defaultDomainIds, next);
+      return next;
+    });
   }, [customDomains]);
+
+  const setDefaultDomain = useCallback((domainId: string, workspaceId: string) => {
+    setDefaultDomainIds(prev => {
+      const next = { ...prev, [workspaceId]: domainId };
+      save(S.defaultDomainIds, next);
+      return next;
+    });
+  }, []);
+
+  const getDefaultDomain = useCallback((workspaceId: string): CustomDomain | undefined => {
+    const domainId = defaultDomainIds[workspaceId];
+    if (!domainId) return undefined;
+    return customDomains.find(d => d.id === domainId && d.workspaceId === workspaceId);
+  }, [customDomains, defaultDomainIds]);
 
   const verifyDomain = useCallback(async (id: string): Promise<boolean> => {
     await new Promise(r => setTimeout(r, 1800));
@@ -286,9 +312,25 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [customDomains]);
 
   const removeDomain = useCallback((id: string) => {
+    const removed = customDomains.find(d => d.id === id);
     const updated = customDomains.filter(d => d.id !== id);
     setCustomDomains(updated);
     save(S.customDomains, updated);
+    // If removed domain was the default, promote the next domain for the workspace or clear
+    if (removed) {
+      setDefaultDomainIds(prev => {
+        if (prev[removed.workspaceId] !== id) return prev;
+        const next = updated.find(d => d.workspaceId === removed.workspaceId);
+        const newMap = { ...prev };
+        if (next) {
+          newMap[removed.workspaceId] = next.id;
+        } else {
+          delete newMap[removed.workspaceId];
+        }
+        save(S.defaultDomainIds, newMap);
+        return newMap;
+      });
+    }
   }, [customDomains]);
 
   const associateLinkWithWorkspace = useCallback((linkId: string, workspaceId: string) => {
@@ -329,6 +371,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       addDomain,
       verifyDomain,
       removeDomain,
+      setDefaultDomain,
+      getDefaultDomain,
       regenerateInviteCode,
       associateLinkWithWorkspace,
       reloadWorkspaces,
