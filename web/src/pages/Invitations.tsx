@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Mail, Link2, Copy, Check, Plus, Trash2, Clock, UserCheck, RefreshCw } from 'lucide-react';
+import { Mail, Link2, Copy, Check, Plus, Trash2, Clock, UserCheck, RefreshCw, ShieldCheck } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import clsx from 'clsx';
 
@@ -255,20 +256,42 @@ export default function Invitations() {
   );
 }
 
-function ActiveMembers({ workspaceId }: { workspaceId?: string }) {
-  const [members, setMembers] = useState<{ id: string; user_id: string; email: string; name?: string; role: string; joined_at: string }[]>([]);
+type Member = { id: string; user_id: string; email: string; name?: string; role: string; joined_at: string };
 
-  useEffect(() => {
+function ActiveMembers({ workspaceId }: { workspaceId?: string }) {
+  const { user } = useAuth();
+  const [members, setMembers] = useState<Member[]>([]);
+  const [myRole, setMyRole] = useState<string>('member');
+
+  const load = useCallback(async () => {
     if (!workspaceId) return;
     const token = localStorage.getItem('mdl-auth-token');
-    fetch(`/api/workspaces/${workspaceId}/members`, {
+    const res = await fetch(`/api/workspaces/${workspaceId}/members`, {
       headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.json())
-      .then((d: { success: boolean; data: typeof members }) => {
-        if (d.success) setMembers(d.data ?? []);
-      });
-  }, [workspaceId]);
+    });
+    const d = await res.json() as { success: boolean; data: Member[] };
+    if (d.success) {
+      setMembers(d.data ?? []);
+      const me = d.data?.find(m => m.user_id === user?.id);
+      if (me) setMyRole(me.role);
+    }
+  }, [workspaceId, user?.id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const removeMember = async (memberId: string, memberEmail: string) => {
+    if (!workspaceId || !confirm(`Remove ${memberEmail} from this workspace?`)) return;
+    const token = localStorage.getItem('mdl-auth-token');
+    const res = await fetch(`/api/workspaces/${workspaceId}/members/${memberId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const d = await res.json() as { success: boolean; error?: string };
+    if (d.success) setMembers(prev => prev.filter(m => m.id !== memberId));
+    else alert(d.error ?? 'Failed to remove member');
+  };
+
+  const canManage = ['owner', 'admin'].includes(myRole);
 
   if (members.length === 0) return null;
 
@@ -298,8 +321,17 @@ function ActiveMembers({ workspaceId }: { workspaceId?: string }) {
               <span className="badge badge-green">Active</span>
               {m.role !== 'member' && (
                 <span className={clsx('badge', m.role === 'owner' ? 'badge-gray' : 'badge-blue')}>
-                  {m.role}
+                  {m.role === 'owner' ? <><ShieldCheck className="w-3 h-3 inline mr-0.5" />owner</> : 'admin'}
                 </span>
+              )}
+              {canManage && m.role !== 'owner' && m.user_id !== user?.id && (
+                <button
+                  onClick={() => removeMember(m.id, m.email)}
+                  className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
+                  title="Remove member"
+                >
+                  <Trash2 className="w-4 h-4 text-red-400" />
+                </button>
               )}
             </div>
           </div>
