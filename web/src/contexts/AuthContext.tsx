@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Limpiar también datos de workspace del localStorage
     ['mdl-workspaces', 'mdl-active-workspace', 'mdl-has-agency',
      'mdl-team-members', 'mdl-custom-domains', 'mdl-invite-code',
-     'mdl-link-workspaces', 'mdl-display-name'].forEach(k => localStorage.removeItem(k));
+     'mdl-link-workspaces', 'mdl-display-name', 'mdl-default-domain-ids'].forEach(k => localStorage.removeItem(k));
     setToken(null);
     setUser(null);
   }, []);

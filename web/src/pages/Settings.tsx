@@ -150,7 +150,7 @@ export default function Settings() {
     setActiveWorkspaceId, createAgency,
     addWorkspace, renameWorkspace, deleteWorkspace,
     inviteMemberByEmail, assignMemberWorkspace, removeMember,
-    addDomain, verifyDomain, removeDomain, regenerateInviteCode,
+    addDomain, verifyDomain, removeDomain, setDefaultDomain, getDefaultDomain, regenerateInviteCode,
   } = useWorkspace();
 
   // ── Theme ──────────────────────────────────────────────────────────────────
@@ -746,10 +746,12 @@ export default function Settings() {
               </div>
               <div>
                 <p className="font-medium text-dark-900 dark:text-white">mdl.cc</p>
-                <p className="text-xs text-dark-500 dark:text-dark-400">Default shared domain</p>
+                <p className="text-xs text-dark-500 dark:text-dark-400">Shared domain</p>
               </div>
             </div>
-            <span className="badge badge-primary">Default</span>
+            {!getDefaultDomain(activeWorkspaceId) && (
+              <span className="badge badge-primary">Default</span>
+            )}
           </div>
 
           {/* Custom domains list */}
@@ -758,6 +760,7 @@ export default function Settings() {
               {customDomains.map((d: CustomDomain) => {
                 const ws = workspaces.find((w) => w.id === d.workspaceId);
                 const isVerifying = verifyingId === d.id;
+                const isDefault = getDefaultDomain(d.workspaceId)?.id === d.id;
                 return (
                   <div key={d.id} className="rounded-xl border border-dark-100 dark:border-dark-700 overflow-hidden">
                     <div className="flex items-center justify-between p-4">
@@ -766,13 +769,24 @@ export default function Settings() {
                           <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                          <p className="font-medium text-dark-900 dark:text-white">{d.domain}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-dark-900 dark:text-white">{d.domain}</p>
+                            {isDefault && <span className="badge badge-primary">Default</span>}
+                          </div>
                           <p className="text-xs text-dark-500 dark:text-dark-400">
                             {ws ? `Workspace: ${ws.name}` : 'Unknown workspace'}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        {!isDefault && (
+                          <button
+                            onClick={() => setDefaultDomain(d.id, d.workspaceId)}
+                            className="btn btn-secondary btn-sm"
+                          >
+                            Set as default
+                          </button>
+                        )}
                         {d.verified ? (
                           <span className="flex items-center gap-1 badge badge-green">
                             <CheckCircle2 className="w-3 h-3" /> Verified
