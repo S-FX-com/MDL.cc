@@ -80,10 +80,25 @@ export async function deleteWorkspace(wsId: string, request: Request, env: Env):
   const user = await getAuthUser(request, env);
   if (!user) return errorResponse('Unauthorized', 401);
 
-  const ws = await env.DB.prepare('SELECT owner_id FROM workspaces WHERE id = ?')
-    .bind(wsId).first<{ owner_id: string }>();
+  const ws = await env.DB.prepare('SELECT id FROM workspaces WHERE id = ?')
+    .bind(wsId).first();
   if (!ws) return errorResponse('Workspace not found', 404);
-  if (ws.owner_id !== user.id) return errorResponse('Only the owner can delete this workspace', 403);
+
+  const requester = await env.DB.prepare(
+    `SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?`
+  ).bind(wsId, user.id).first<{ role: string }>();
+  if (!requester || !['owner', 'admin'].includes(requester.role)) {
+    return errorResponse('Only admins can delete this workspace', 403);
+  }
+
+  // Block deletion while other admins exist
+  const otherAdmins = await env.DB.prepare(
+    `SELECT COUNT(*) as count FROM workspace_members
+     WHERE workspace_id = ? AND role IN ('owner','admin') AND user_id != ?`
+  ).bind(wsId, user.id).first<{ count: number }>();
+  if (otherAdmins && otherAdmins.count > 0) {
+    return errorResponse('Remove all other admins before deleting the workspace', 403);
+  }
 
   await env.DB.prepare('DELETE FROM workspaces WHERE id = ?').bind(wsId).run();
   return successResponse(null, 'Workspace deleted');
@@ -108,6 +123,31 @@ export async function getWorkspaceMembers(wsId: string, request: Request, env: E
   `).bind(wsId).all();
 
   return successResponse(members.results);
+}
+
+export async function updateMemberRole(wsId: string, memberId: string, request: Request, env: Env): Promise<Response> {
+  const user = await getAuthUser(request, env);
+  if (!user) return errorResponse('Unauthorized', 401);
+
+  const requester = await env.DB.prepare(
+    `SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?`
+  ).bind(wsId, user.id).first<{ role: string }>();
+  if (!requester || !['owner', 'admin'].includes(requester.role)) return errorResponse('Only admins can change roles', 403);
+
+  let body: { role: string };
+  try { body = await request.json(); } catch { return errorResponse('Invalid body', 400); }
+  if (!['member', 'admin'].includes(body.role)) return errorResponse('Role must be member or admin', 400);
+
+  const target = await env.DB.prepare(
+    `SELECT role FROM workspace_members WHERE id = ? AND workspace_id = ?`
+  ).bind(memberId, wsId).first<{ role: string }>();
+  if (!target) return errorResponse('Member not found', 404);
+  if (target.role === 'owner') return errorResponse('Cannot change the owner role', 403);
+
+  await env.DB.prepare(`UPDATE workspace_members SET role = ? WHERE id = ? AND workspace_id = ?`)
+    .bind(body.role, memberId, wsId).run();
+
+  return successResponse({ role: body.role }, 'Role updated');
 }
 
 export async function removeWorkspaceMember(wsId: string, memberId: string, request: Request, env: Env): Promise<Response> {

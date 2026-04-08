@@ -28,6 +28,7 @@ import {
   deleteWorkspace,
   getWorkspaceMembers,
   removeWorkspaceMember,
+  updateMemberRole,
   lookupWorkspace,
 } from './handlers/workspaces';
 import { errorResponse, jsonResponse } from './utils';
@@ -147,8 +148,9 @@ export default {
       }
 
       const wsMemberMatch = path.match(/^\/api\/workspaces\/([^/]+)\/members\/([^/]+)$/);
-      if (wsMemberMatch && method === 'DELETE') {
-        return removeWorkspaceMember(wsMemberMatch[1], wsMemberMatch[2], request, env);
+      if (wsMemberMatch) {
+        if (method === 'DELETE') return removeWorkspaceMember(wsMemberMatch[1], wsMemberMatch[2], request, env);
+        if (method === 'PATCH')  return updateMemberRole(wsMemberMatch[1], wsMemberMatch[2], request, env);
       }
 
       const wsInvitesMatch = path.match(/^\/api\/workspaces\/([^/]+)\/invitations$/);

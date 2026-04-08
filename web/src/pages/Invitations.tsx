@@ -279,6 +279,18 @@ function ActiveMembers({ workspaceId }: { workspaceId?: string }) {
 
   useEffect(() => { load(); }, [load]);
 
+  const changeRole = async (memberId: string, newRole: string) => {
+    const token = localStorage.getItem('mdl-auth-token');
+    const res = await fetch(`/api/workspaces/${workspaceId}/members/${memberId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ role: newRole }),
+    });
+    const d = await res.json() as { success: boolean; error?: string };
+    if (d.success) setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role: newRole } : m));
+    else alert(d.error ?? 'Failed to update role');
+  };
+
   const removeMember = async (memberId: string, memberEmail: string) => {
     if (!workspaceId || !confirm(`Remove ${memberEmail} from this workspace?`)) return;
     const token = localStorage.getItem('mdl-auth-token');
@@ -291,7 +303,8 @@ function ActiveMembers({ workspaceId }: { workspaceId?: string }) {
     else alert(d.error ?? 'Failed to remove member');
   };
 
-  const canManage = ['owner', 'admin'].includes(myRole);
+  const isOwner = myRole === 'owner';
+  const canManageRoles = ['owner', 'admin'].includes(myRole);
 
   if (members.length === 0) return null;
 
@@ -307,8 +320,18 @@ function ActiveMembers({ workspaceId }: { workspaceId?: string }) {
         {members.map(m => (
           <div key={m.id} className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
-                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+              <div className={clsx(
+                'w-8 h-8 rounded-full flex items-center justify-center shrink-0',
+                m.role === 'owner' ? 'bg-violet-100 dark:bg-violet-900/30' :
+                m.role === 'admin' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                'bg-emerald-100 dark:bg-emerald-900/30'
+              )}>
+                <span className={clsx(
+                  'text-xs font-bold',
+                  m.role === 'owner' ? 'text-violet-600 dark:text-violet-400' :
+                  m.role === 'admin' ? 'text-blue-600 dark:text-blue-400' :
+                  'text-emerald-600 dark:text-emerald-400'
+                )}>
                   {(m.name || m.email)[0].toUpperCase()}
                 </span>
               </div>
@@ -318,13 +341,29 @@ function ActiveMembers({ workspaceId }: { workspaceId?: string }) {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="badge badge-green">Active</span>
-              {m.role !== 'member' && (
-                <span className={clsx('badge', m.role === 'owner' ? 'badge-gray' : 'badge-blue')}>
-                  {m.role === 'owner' ? <><ShieldCheck className="w-3 h-3 inline mr-0.5" />owner</> : 'admin'}
+              {/* Role — admins see a dropdown to change, others see a badge */}
+              {canManageRoles && m.role !== 'owner' && m.user_id !== user?.id ? (
+                <select
+                  value={m.role}
+                  onChange={e => changeRole(m.id, e.target.value)}
+                  className="input text-xs py-1 px-2"
+                  style={{ width: 'auto', fontSize: '12px', padding: '4px 8px' }}
+                >
+                  <option value="member">Member</option>
+                  <option value="admin">Admin</option>
+                </select>
+              ) : (
+                <span className={clsx(
+                  'badge',
+                  m.role === 'owner' ? 'badge-gray' :
+                  m.role === 'admin' ? 'badge-blue' : 'badge-green'
+                )}>
+                  {m.role === 'owner' && <ShieldCheck className="w-3 h-3 inline mr-0.5" />}
+                  {m.role}
                 </span>
               )}
-              {canManage && m.role !== 'owner' && m.user_id !== user?.id && (
+              {/* Remove button — owner/admin can remove non-owners (not themselves) */}
+              {['owner', 'admin'].includes(myRole) && m.role !== 'owner' && m.user_id !== user?.id && (
                 <button
                   onClick={() => removeMember(m.id, m.email)}
                   className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
