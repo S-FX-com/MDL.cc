@@ -51,6 +51,17 @@ export async function createLink(request: Request, env: Env): Promise<Response> 
     const id = generateId();
     const now = new Date().toISOString();
 
+    // Validate domain_id: only use it if it actually exists in the domains table.
+    // Custom domains stored locally in the webapp have client-generated UUIDs that
+    // don't exist in the DB, so we bypass the FK constraint by falling back to null.
+    let domainId: string | null = null;
+    if (body.domain_id) {
+      const domainRow = await env.DB.prepare('SELECT id FROM domains WHERE id = ?')
+        .bind(body.domain_id)
+        .first<{ id: string }>();
+      if (domainRow) domainId = domainRow.id;
+    }
+
     // Insert into D1
     await env.DB.prepare(
       `INSERT INTO links (id, short_code, original_url, title, description, group_id, domain_id, password, expires_at, is_active, created_at, updated_at)
@@ -63,7 +74,7 @@ export async function createLink(request: Request, env: Env): Promise<Response> 
         title,
         body.description || null,
         body.group_id || null,
-        body.domain_id || null,
+        domainId,
         body.password || null,
         body.expires_at || null,
         now,
