@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Sun, Moon, Monitor, Globe, Key, Shield, Code, ExternalLink,
   User, Building2, Users, Edit2, Check, X, Plus, Trash2,
@@ -7,12 +7,11 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
+import { useAuth } from '../contexts/AuthContext';
 import type { TeamMember, CustomDomain } from '../contexts/WorkspaceContext';
 import clsx from 'clsx';
 
 type ThemeOption = 'light' | 'dark' | 'system';
-
-const DISPLAY_NAME_KEY = 'mdl-display-name';
 
 // ── Small reusable section header ─────────────────────────────────────────────
 function SectionHeader({
@@ -144,6 +143,7 @@ function DnsInstructions({ domain }: { domain: string }) {
 
 export default function Settings() {
   const { setTheme } = useTheme();
+  const { user, token, updateUser } = useAuth();
   const {
     workspaces, activeWorkspaceId, hasAgency,
     teamMembers, customDomains, inviteCode,
@@ -169,13 +169,29 @@ export default function Settings() {
   };
 
   // ── Profile ────────────────────────────────────────────────────────────────
-  const [displayName, setDisplayName] = useState(localStorage.getItem(DISPLAY_NAME_KEY) || '');
+  const [displayName, setDisplayName] = useState(user?.name || '');
   const [displayNameSaved, setDisplayNameSaved] = useState(false);
 
-  const saveDisplayName = () => {
-    localStorage.setItem(DISPLAY_NAME_KEY, displayName);
-    setDisplayNameSaved(true);
-    setTimeout(() => setDisplayNameSaved(false), 2000);
+  // Sincronizar con usuario cuando cargue
+  useEffect(() => {
+    if (user?.name) setDisplayName(user.name);
+  }, [user?.name]);
+
+  const saveDisplayName = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/auth/me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: displayName }),
+      });
+      const data = await res.json() as { success: boolean; data?: { name: string } };
+      if (data.success && data.data) updateUser({ name: data.data.name });
+      setDisplayNameSaved(true);
+      setTimeout(() => setDisplayNameSaved(false), 2000);
+    } catch {
+      // silencioso
+    }
   };
 
   // ── Agency ────────────────────────────────────────────────────────────────
@@ -200,12 +216,16 @@ export default function Settings() {
   const [showNewWsForm, setShowNewWsForm] = useState(false);
   const [newWsName, setNewWsName] = useState('');
 
-  const handleAddWorkspace = () => {
+  const handleAddWorkspace = async () => {
     if (!newWsName.trim()) return;
-    const ws = addWorkspace(newWsName);
-    setNewWsName('');
-    setShowNewWsForm(false);
-    setActiveWorkspaceId(ws.id);
+    try {
+      const ws = await addWorkspace(newWsName);
+      setNewWsName('');
+      setShowNewWsForm(false);
+      setActiveWorkspaceId(ws.id);
+    } catch {
+      // silencioso
+    }
   };
 
   // ── Team Members ──────────────────────────────────────────────────────────
@@ -214,12 +234,25 @@ export default function Settings() {
   const [inviteTab, setInviteTab] = useState<'email' | 'code'>('email');
   const [codeCopied, setCodeCopied] = useState(false);
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteStatus, setInviteStatus] = useState<'idle' | 'sent' | 'error'>('idle');
 
-  const handleInvite = () => {
-    if (!inviteEmail.trim() || !inviteEmail.includes('@')) return;
-    inviteMemberByEmail(inviteEmail.trim(), inviteWsIds);
-    setInviteEmail('');
-    setInviteWsIds([activeWorkspaceId]);
+  const handleInvite = async () => {
+    if (!inviteEmail.trim() || !inviteEmail.includes('@') || inviteSending) return;
+    setInviteSending(true);
+    setInviteStatus('idle');
+    try {
+      await inviteMemberByEmail(inviteEmail.trim(), inviteWsIds);
+      setInviteEmail('');
+      setInviteWsIds([activeWorkspaceId]);
+      setInviteStatus('sent');
+      setTimeout(() => setInviteStatus('idle'), 3000);
+    } catch {
+      setInviteStatus('error');
+      setTimeout(() => setInviteStatus('idle'), 3000);
+    } finally {
+      setInviteSending(false);
+    }
   };
 
   const copyInviteCode = async () => {
@@ -508,11 +541,17 @@ export default function Settings() {
                   className="input flex-1"
                   onKeyDown={(e) => e.key === 'Enter' && handleInvite()}
                 />
-                <button onClick={handleInvite} className="btn btn-primary gap-1.5">
+                <button onClick={handleInvite} disabled={inviteSending} className="btn btn-primary gap-1.5">
                   <Plus className="w-4 h-4" />
-                  Invite
+                  {inviteSending ? 'Sending…' : 'Invite'}
                 </button>
               </div>
+              {inviteStatus === 'sent' && (
+                <p className="text-xs text-emerald-500">Invitation sent!</p>
+              )}
+              {inviteStatus === 'error' && (
+                <p className="text-xs text-red-400">Failed to send invitation. Please try again.</p>
+              )}
 
               {/* Workspace assignment for invite */}
               <div>

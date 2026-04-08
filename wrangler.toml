@@ -2,6 +2,7 @@
 # "The middle-point between you and your audience"
 
 name = "mdl-cc"
+account_id = "df01126c18116d8254d054785909a59e"
 main = "src/worker/index.ts"
 compatibility_date = "2024-01-01"
 

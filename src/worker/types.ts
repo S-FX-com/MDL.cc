@@ -6,6 +6,27 @@ export interface Env {
   ENVIRONMENT: string;
   APP_NAME: string;
   APP_TAGLINE: string;
+  RESEND_API_KEY: string;
+  JWT_SECRET: string;
+  PBKDF2_SALT_PREFIX: string;
+}
+
+export interface Workspace {
+  id: string;
+  name: string;
+  slug: string;
+  owner_id: string;
+  role?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkspaceMember {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  role: string;
+  joined_at: string;
 }
 
 export interface Link {

@@ -19,6 +19,16 @@ import {
   createTag,
 } from './handlers/api';
 import { generateQR, saveQRConfig } from './handlers/qr';
+import { sendInviteEmail, validateInvite, acceptInvite } from './handlers/email';
+import { register, login, getMe, updateProfile } from './handlers/auth';
+import {
+  getWorkspaces,
+  createWorkspace,
+  updateWorkspace,
+  deleteWorkspace,
+  getWorkspaceMembers,
+  lookupWorkspace,
+} from './handlers/workspaces';
 import { errorResponse, jsonResponse } from './utils';
 
 export default {
@@ -107,6 +117,34 @@ export default {
         if (method === 'POST') return saveQRConfig(request, env);
       }
 
+      // Invite emails
+      if (path === '/api/invites' && method === 'POST') return sendInviteEmail(request, env);
+      if (path === '/api/invites/validate' && method === 'GET') return validateInvite(request, env);
+      if (path === '/api/invites/accept'   && method === 'POST') return acceptInvite(request, env);
+
+      // ============ Auth Routes ============
+      if (path === '/api/auth/register' && method === 'POST') return register(request, env);
+      if (path === '/api/auth/login'    && method === 'POST') return login(request, env);
+      if (path === '/api/auth/me'       && method === 'GET')  return getMe(request, env);
+      if (path === '/api/auth/me'       && method === 'PUT')  return updateProfile(request, env);
+
+      // ============ Workspace Routes ============
+      if (path === '/api/workspaces/lookup' && method === 'GET') return lookupWorkspace(request, env);
+      if (path === '/api/workspaces' && method === 'GET')  return getWorkspaces(request, env);
+      if (path === '/api/workspaces' && method === 'POST') return createWorkspace(request, env);
+
+      const wsMatch = path.match(/^\/api\/workspaces\/([^/]+)$/);
+      if (wsMatch) {
+        const wsId = wsMatch[1];
+        if (method === 'PUT')    return updateWorkspace(wsId, request, env);
+        if (method === 'DELETE') return deleteWorkspace(wsId, request, env);
+      }
+
+      const wsMembersMatch = path.match(/^\/api\/workspaces\/([^/]+)\/members$/);
+      if (wsMembersMatch && method === 'GET') {
+        return getWorkspaceMembers(wsMembersMatch[1], request, env);
+      }
+
       // ============ Static Assets & Web App ============
 
       // Serve static assets (handled by Cloudflare Sites/Pages)
@@ -137,7 +175,7 @@ export default {
         // Exclude API and app routes
         if (
           !shortCode.startsWith('api') &&
-          !['dashboard', 'login', 'signup', 'settings', 'groups', 'analytics'].includes(shortCode)
+          !['dashboard', 'login', 'signup', 'register', 'settings', 'groups', 'analytics', 'invitations', 'join', 'workspace'].includes(shortCode)
         ) {
           return handleRedirect(shortCode, request, env);
         }

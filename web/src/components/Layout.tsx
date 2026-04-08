@@ -14,9 +14,11 @@ import {
   Users,
   ChevronDown,
   Check,
+  LogOut,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
+import { useAuth } from '../contexts/AuthContext';
 import CreateLinkModal from './CreateLinkModal';
 import clsx from 'clsx';
 
@@ -32,6 +34,7 @@ const navigation = [
 export default function Layout() {
   const { theme, toggleTheme } = useTheme();
   const { activeWorkspace, workspaces, setActiveWorkspaceId } = useWorkspace();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen]   = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -39,19 +42,12 @@ export default function Layout() {
   const [wsSwitcherOpen, setWsSwitcherOpen] = useState(false);
   const wsSwitcherRef = useRef<HTMLDivElement>(null);
 
-  // Display name from localStorage (set in Settings page)
-  const [displayName, setDisplayName] = useState(() =>
-    localStorage.getItem('mdl-display-name') || 'User'
-  );
+  const displayName = user?.name || user?.email || 'Usuario';
 
-  // Keep display name in sync if Settings page updates it
-  useEffect(() => {
-    const handleStorage = () => {
-      setDisplayName(localStorage.getItem('mdl-display-name') || 'User');
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   // Close workspace switcher when clicking outside
   useEffect(() => {
@@ -243,26 +239,38 @@ export default function Layout() {
           className="p-4 space-y-3"
           style={{ borderTop: theme === 'dark' ? '1px solid #2d3748' : '1px solid #f2f3f5' }}
         >
-          {/* User display — click to go to Settings */}
-          <button
-            onClick={() => { setSidebarOpen(false); navigate('/settings'); }}
-            className="flex items-center gap-2 w-full px-3 py-2 rounded-xl transition-colors text-left"
-            onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#2d3748' : '#f0f0f0'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-          >
-            <div
-              className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-white font-bold text-xs"
-              style={{ background: '#6366f1' }}
+          {/* User display + logout */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => { setSidebarOpen(false); navigate('/settings'); }}
+              className="flex items-center gap-2 flex-1 px-3 py-2 rounded-xl transition-colors text-left"
+              onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#2d3748' : '#f0f0f0'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
-              {displayName[0]?.toUpperCase() ?? 'U'}
-            </div>
-            <span
-              className="text-xs font-semibold truncate"
-              style={{ color: theme === 'dark' ? '#f0f0f0' : '#181e25' }}
+              <div
+                className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-white font-bold text-xs"
+                style={{ background: '#6366f1' }}
+              >
+                {displayName[0]?.toUpperCase() ?? 'U'}
+              </div>
+              <span
+                className="text-xs font-semibold truncate"
+                style={{ color: theme === 'dark' ? '#f0f0f0' : '#181e25' }}
+              >
+                {displayName}
+              </span>
+            </button>
+            <button
+              onClick={handleLogout}
+              title="Sign out"
+              className="p-2 rounded-lg transition-colors shrink-0"
+              style={{ color: '#8e8e93' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#2d3748' : '#f0f0f0'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
-              {displayName}
-            </span>
-          </button>
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
 
           {/* Theme toggle */}
           <button

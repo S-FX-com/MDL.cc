@@ -1,16 +1,20 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { useAuth } from './AuthContext';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface Workspace {
   id: string;
   name: string;
-  role: 'Admin' | 'Member';
+  slug?: string;
+  role: string;
 }
 
 export interface TeamMember {
   id: string;
   email: string;
+  name?: string;
+  user_id?: string;
   workspaceIds: string[];
   status: 'pending' | 'active';
   invitedAt: string;
@@ -32,14 +36,15 @@ interface WorkspaceContextType {
   teamMembers: TeamMember[];
   customDomains: CustomDomain[];
   inviteCode: string;
-  linkWorkspaces: Record<string, string>; // linkId -> workspaceId
+  linkWorkspaces: Record<string, string>;
+  loadingWorkspaces: boolean;
   // Actions
   setActiveWorkspaceId: (id: string) => void;
   createAgency: () => void;
-  addWorkspace: (name: string) => Workspace;
-  renameWorkspace: (id: string, name: string) => void;
-  deleteWorkspace: (id: string) => void;
-  inviteMemberByEmail: (email: string, workspaceIds: string[]) => void;
+  addWorkspace: (name: string) => Promise<Workspace>;
+  renameWorkspace: (id: string, name: string) => Promise<void>;
+  deleteWorkspace: (id: string) => Promise<void>;
+  inviteMemberByEmail: (email: string, workspaceIds: string[]) => Promise<void>;
   assignMemberWorkspace: (memberId: string, workspaceId: string, assign: boolean) => void;
   removeMember: (memberId: string) => void;
   addDomain: (domain: string, workspaceId: string) => void;
@@ -47,12 +52,12 @@ interface WorkspaceContextType {
   removeDomain: (id: string) => void;
   regenerateInviteCode: () => string;
   associateLinkWithWorkspace: (linkId: string, workspaceId: string) => void;
+  reloadWorkspaces: () => Promise<void>;
 }
 
 // ── Storage helpers ──────────────────────────────────────────────────────────
 
 const S = {
-  workspaces:    'mdl-workspaces',
   activeWsId:    'mdl-active-workspace',
   hasAgency:     'mdl-has-agency',
   teamMembers:   'mdl-team-members',
@@ -65,9 +70,7 @@ function load<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
+  } catch { return fallback; }
 }
 
 function save(key: string, value: unknown) {
@@ -81,14 +84,18 @@ function generateCode(len = 8) {
     .join('');
 }
 
-function defaultWorkspaces(): Workspace[] {
-  const stored = localStorage.getItem(S.workspaces);
-  if (stored) {
-    try { return JSON.parse(stored); } catch {}
-  }
-  // Try to pick up legacy key from old Settings.tsx
-  const legacyName = localStorage.getItem('mdl-workspace-name') || 'My Workspace';
-  return [{ id: 'default', name: legacyName, role: 'Admin' }];
+// ── API helper ───────────────────────────────────────────────────────────────
+
+function authFetch(path: string, options: RequestInit = {}) {
+  const token = localStorage.getItem('mdl-auth-token');
+  return fetch(path, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
 }
 
 // ── Context ──────────────────────────────────────────────────────────────────
@@ -96,30 +103,77 @@ function defaultWorkspaces(): Workspace[] {
 const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
-  const [workspaces, setWorkspaces]       = useState<Workspace[]>(defaultWorkspaces);
-  const [activeWsId, setActiveWsId]       = useState(() => load<string>(S.activeWsId, 'default'));
+  const { token } = useAuth();
+  const [workspaces, setWorkspaces]       = useState<Workspace[]>([]);
+  const [activeWsId, setActiveWsId]       = useState(() => load<string>(S.activeWsId, ''));
   const [hasAgency, setHasAgency]         = useState(() => load<boolean>(S.hasAgency, false));
   const [teamMembers, setTeamMembers]     = useState<TeamMember[]>(() => load(S.teamMembers, []));
   const [customDomains, setCustomDomains] = useState<CustomDomain[]>(() => load(S.customDomains, []));
   const [linkWorkspaces, setLinkWorkspaces] = useState<Record<string, string>>(() => load(S.linkWorkspaces, {}));
-  const [inviteCode, setInviteCode]       = useState<string>(() => {
+  const [loadingWorkspaces, setLoadingWorkspaces] = useState(true);
+  const [inviteCode] = useState<string>(() => {
     const stored = localStorage.getItem(S.inviteCode);
-    return stored || generateCode();
+    if (stored) return stored;
+    const code = generateCode();
+    localStorage.setItem(S.inviteCode, code);
+    return code;
   });
 
-  // Persist invite code on first load
-  useEffect(() => {
-    if (!localStorage.getItem(S.inviteCode)) {
-      localStorage.setItem(S.inviteCode, inviteCode);
-    }
-  }, [inviteCode]);
+  // ── Cargar workspaces desde la API ──────────────────────────────────────
 
-  const persist = useCallback((ws: Workspace[]) => {
-    setWorkspaces(ws);
-    save(S.workspaces, ws);
-    // Keep legacy key in sync (first workspace name)
-    if (ws[0]) localStorage.setItem('mdl-workspace-name', ws[0].name);
+  const reloadWorkspaces = useCallback(async () => {
+    const token = localStorage.getItem('mdl-auth-token');
+    if (!token) {
+      setWorkspaces([]);
+      setLoadingWorkspaces(false);
+      return;
+    }
+    try {
+      setLoadingWorkspaces(true);
+      const res = await authFetch('/api/workspaces');
+      const data = await res.json() as { success: boolean; data?: Workspace[] };
+      if (data.success && data.data) {
+        const ws = data.data.map(w => ({
+          ...w,
+          role: (w.role === 'owner' ? 'Admin' : 'Member') as string,
+        }));
+        setWorkspaces(ws);
+        // Activar primer workspace si no hay uno activo o el activo ya no existe
+        if (ws.length > 0) {
+          // If coming from workspace entry page, activate that workspace
+          const sessionSlug = sessionStorage.getItem('mdl-workspace-slug');
+          const sessionMatch = sessionSlug ? ws.find(w => w.slug === sessionSlug) : null;
+
+          if (sessionMatch) {
+            setActiveWsId(sessionMatch.id);
+            save(S.activeWsId, sessionMatch.id);
+            sessionStorage.removeItem('mdl-workspace-slug');
+            sessionStorage.removeItem('mdl-workspace-name');
+          } else {
+            const saved = localStorage.getItem(S.activeWsId);
+            const valid = ws.find(w => w.id === saved);
+            if (!valid) {
+              setActiveWsId(ws[0].id);
+              save(S.activeWsId, ws[0].id);
+            }
+          }
+        }
+        // Si tiene más de 1 workspace, habilitar Agency
+        if (ws.length > 1) {
+          setHasAgency(true);
+          save(S.hasAgency, true);
+        }
+      }
+    } catch (e) {
+      console.error('Error cargando workspaces:', e);
+    } finally {
+      setLoadingWorkspaces(false);
+    }
   }, []);
+
+  useEffect(() => {
+    reloadWorkspaces();
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setActiveWorkspaceId = useCallback((id: string) => {
     setActiveWsId(id);
@@ -131,29 +185,53 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     save(S.hasAgency, true);
   }, []);
 
-  const addWorkspace = useCallback((name: string): Workspace => {
-    const ws: Workspace = { id: crypto.randomUUID(), name: name.trim(), role: 'Admin' };
-    const updated = [...workspaces, ws];
-    persist(updated);
+  const addWorkspace = useCallback(async (name: string): Promise<Workspace> => {
+    const res = await authFetch('/api/workspaces', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+    const data = await res.json() as { success: boolean; data?: Workspace; error?: string };
+    if (!data.success || !data.data) throw new Error(data.error || 'Error creando workspace');
+
+    const ws: Workspace = { ...data.data, role: 'Admin' };
+    setWorkspaces(prev => [...prev, ws]);
+    setHasAgency(true);
+    save(S.hasAgency, true);
     return ws;
-  }, [workspaces, persist]);
+  }, []);
 
-  const renameWorkspace = useCallback((id: string, name: string) => {
-    const updated = workspaces.map((w) => w.id === id ? { ...w, name: name.trim() } : w);
-    persist(updated);
-  }, [workspaces, persist]);
-
-  const deleteWorkspace = useCallback((id: string) => {
-    if (workspaces.length <= 1) return;
-    const updated = workspaces.filter((w) => w.id !== id);
-    persist(updated);
-    if (activeWsId === id) {
-      const next = updated[0]?.id ?? '';
-      setActiveWorkspaceId(next);
+  const renameWorkspace = useCallback(async (id: string, name: string) => {
+    const res = await authFetch(`/api/workspaces/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ name }),
+    });
+    const data = await res.json() as { success: boolean; data?: Workspace };
+    if (data.success && data.data) {
+      setWorkspaces(prev => prev.map(w => w.id === id ? { ...w, name: data.data!.name } : w));
     }
-  }, [workspaces, activeWsId, persist, setActiveWorkspaceId]);
+  }, []);
 
-  const inviteMemberByEmail = useCallback((email: string, workspaceIds: string[]) => {
+  const deleteWorkspace = useCallback(async (id: string) => {
+    if (workspaces.length <= 1) return;
+    await authFetch(`/api/workspaces/${id}`, { method: 'DELETE' });
+    setWorkspaces(prev => prev.filter(w => w.id !== id));
+    if (activeWsId === id) {
+      const next = workspaces.find(w => w.id !== id);
+      if (next) setActiveWorkspaceId(next.id);
+    }
+  }, [workspaces, activeWsId, setActiveWorkspaceId]);
+
+  const inviteMemberByEmail = useCallback(async (email: string, workspaceIds: string[]) => {
+    const wsNames = workspaces
+      .filter(w => workspaceIds.includes(w.id))
+      .map(w => w.name).join(', ');
+    const workspaceName = wsNames || workspaces[0]?.name || 'MDL.cc';
+
+    await authFetch('/api/invites', {
+      method: 'POST',
+      body: JSON.stringify({ email, workspaceName, inviteCode }),
+    });
+
     const member: TeamMember = {
       id: crypto.randomUUID(),
       email,
@@ -164,14 +242,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const updated = [...teamMembers, member];
     setTeamMembers(updated);
     save(S.teamMembers, updated);
-  }, [teamMembers]);
+  }, [teamMembers, workspaces, inviteCode]);
 
   const assignMemberWorkspace = useCallback((memberId: string, workspaceId: string, assign: boolean) => {
-    const updated = teamMembers.map((m) => {
+    const updated = teamMembers.map(m => {
       if (m.id !== memberId) return m;
       const ids = assign
         ? [...new Set([...m.workspaceIds, workspaceId])]
-        : m.workspaceIds.filter((id) => id !== workspaceId);
+        : m.workspaceIds.filter(id => id !== workspaceId);
       return { ...m, workspaceIds: ids };
     });
     setTeamMembers(updated);
@@ -179,7 +257,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [teamMembers]);
 
   const removeMember = useCallback((memberId: string) => {
-    const updated = teamMembers.filter((m) => m.id !== memberId);
+    const updated = teamMembers.filter(m => m.id !== memberId);
     setTeamMembers(updated);
     save(S.teamMembers, updated);
   }, [teamMembers]);
@@ -198,23 +276,21 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [customDomains]);
 
   const verifyDomain = useCallback(async (id: string): Promise<boolean> => {
-    // Simulate async DNS check — in production this calls an API endpoint
-    await new Promise((r) => setTimeout(r, 1800));
-    // For demo: mark as verified
-    const updated = customDomains.map((d) => d.id === id ? { ...d, verified: true } : d);
+    await new Promise(r => setTimeout(r, 1800));
+    const updated = customDomains.map(d => d.id === id ? { ...d, verified: true } : d);
     setCustomDomains(updated);
     save(S.customDomains, updated);
     return true;
   }, [customDomains]);
 
   const removeDomain = useCallback((id: string) => {
-    const updated = customDomains.filter((d) => d.id !== id);
+    const updated = customDomains.filter(d => d.id !== id);
     setCustomDomains(updated);
     save(S.customDomains, updated);
   }, [customDomains]);
 
   const associateLinkWithWorkspace = useCallback((linkId: string, workspaceId: string) => {
-    setLinkWorkspaces((prev) => {
+    setLinkWorkspaces(prev => {
       const updated = { ...prev, [linkId]: workspaceId };
       save(S.linkWorkspaces, updated);
       return updated;
@@ -223,12 +299,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const regenerateInviteCode = useCallback((): string => {
     const code = generateCode();
-    setInviteCode(code);
     localStorage.setItem(S.inviteCode, code);
     return code;
   }, []);
 
-  const activeWorkspace = workspaces.find((w) => w.id === activeWsId) ?? workspaces[0];
+  const activeWorkspace = workspaces.find(w => w.id === activeWsId) ?? workspaces[0];
 
   return (
     <WorkspaceContext.Provider value={{
@@ -240,6 +315,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       customDomains,
       inviteCode,
       linkWorkspaces,
+      loadingWorkspaces,
       setActiveWorkspaceId,
       createAgency,
       addWorkspace,
@@ -253,6 +329,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       removeDomain,
       regenerateInviteCode,
       associateLinkWithWorkspace,
+      reloadWorkspaces,
     }}>
       {children}
     </WorkspaceContext.Provider>
