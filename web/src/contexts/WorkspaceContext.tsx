@@ -159,8 +159,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             }
           }
         }
-        // Si tiene más de 1 workspace, habilitar Agency
-        if (ws.length > 1) {
+        // Enable Agency whenever user has at least one workspace
+        if (ws.length >= 1) {
           setHasAgency(true);
           save(S.hasAgency, true);
         }
