@@ -304,7 +304,6 @@ function ActiveMembers({ workspaceId }: { workspaceId?: string }) {
   };
 
   const isOwner = myRole === 'owner';
-  const canManageRoles = ['owner', 'admin'].includes(myRole);
 
   if (members.length === 0) return null;
 
@@ -341,8 +340,8 @@ function ActiveMembers({ workspaceId }: { workspaceId?: string }) {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {/* Role — admins see a dropdown to change, others see a badge */}
-              {canManageRoles && m.role !== 'owner' && m.user_id !== user?.id ? (
+              {/* Role — owner sees a dropdown to change, others see a badge */}
+              {isOwner && m.role !== 'owner' ? (
                 <select
                   value={m.role}
                   onChange={e => changeRole(m.id, e.target.value)}

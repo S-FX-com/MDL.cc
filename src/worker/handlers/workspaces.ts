@@ -80,25 +80,10 @@ export async function deleteWorkspace(wsId: string, request: Request, env: Env):
   const user = await getAuthUser(request, env);
   if (!user) return errorResponse('Unauthorized', 401);
 
-  const ws = await env.DB.prepare('SELECT id FROM workspaces WHERE id = ?')
-    .bind(wsId).first();
+  const ws = await env.DB.prepare('SELECT owner_id FROM workspaces WHERE id = ?')
+    .bind(wsId).first<{ owner_id: string }>();
   if (!ws) return errorResponse('Workspace not found', 404);
-
-  const requester = await env.DB.prepare(
-    `SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?`
-  ).bind(wsId, user.id).first<{ role: string }>();
-  if (!requester || !['owner', 'admin'].includes(requester.role)) {
-    return errorResponse('Only admins can delete this workspace', 403);
-  }
-
-  // Block deletion while other admins exist
-  const otherAdmins = await env.DB.prepare(
-    `SELECT COUNT(*) as count FROM workspace_members
-     WHERE workspace_id = ? AND role IN ('owner','admin') AND user_id != ?`
-  ).bind(wsId, user.id).first<{ count: number }>();
-  if (otherAdmins && otherAdmins.count > 0) {
-    return errorResponse('Remove all other admins before deleting the workspace', 403);
-  }
+  if (ws.owner_id !== user.id) return errorResponse('Only the owner can delete this workspace', 403);
 
   await env.DB.prepare('DELETE FROM workspaces WHERE id = ?').bind(wsId).run();
   return successResponse(null, 'Workspace deleted');
@@ -132,7 +117,7 @@ export async function updateMemberRole(wsId: string, memberId: string, request: 
   const requester = await env.DB.prepare(
     `SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?`
   ).bind(wsId, user.id).first<{ role: string }>();
-  if (!requester || !['owner', 'admin'].includes(requester.role)) return errorResponse('Only admins can change roles', 403);
+  if (!requester || requester.role !== 'owner') return errorResponse('Only the owner can change roles', 403);
 
   let body: { role: string };
   try { body = await request.json(); } catch { return errorResponse('Invalid body', 400); }
