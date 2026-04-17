@@ -87,6 +87,9 @@ function InlineEdit({
 // ── DNS Instructions component ────────────────────────────────────────────────
 function DnsInstructions({ domain }: { domain: string }) {
   const [open, setOpen] = useState(false);
+  const hostLabel = domain.split('.').length > 2 ? domain.split('.').slice(0, -2).join('.') : '@';
+  const verifyHost = `_mdl-verify${hostLabel === '@' ? '' : '.' + hostLabel}`;
+  const verifyToken = `mdl-verify=${domain.replace(/[^a-z0-9]/gi, '').slice(0, 24).padEnd(24, 'x')}`;
   return (
     <div className="mt-3">
       <button
@@ -99,7 +102,7 @@ function DnsInstructions({ domain }: { domain: string }) {
       {open && (
         <div className="mt-3 p-4 rounded-xl bg-dark-50 dark:bg-dark-800 space-y-3 text-sm">
           <p className="font-medium text-dark-900 dark:text-white">
-            Add the following DNS record at your domain registrar:
+            Add the following DNS records at your domain registrar:
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-xs font-mono">
@@ -115,21 +118,52 @@ function DnsInstructions({ domain }: { domain: string }) {
                   <td className="pr-4 py-1">
                     <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">CNAME</span>
                   </td>
-                  <td className="pr-4 py-1">{domain.replace(/^www\./, '') === domain ? '@' : 'www'}</td>
+                  <td className="pr-4 py-1">{hostLabel}</td>
                   <td className="py-1 text-primary-600 dark:text-primary-400">cname.mdl.cc</td>
+                </tr>
+                <tr>
+                  <td className="pr-4 py-1">
+                    <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded">TXT</span>
+                  </td>
+                  <td className="pr-4 py-1">{verifyHost}</td>
+                  <td className="py-1 text-primary-600 dark:text-primary-400 break-all">{verifyToken}</td>
                 </tr>
               </tbody>
             </table>
           </div>
+
+          <div className="flex gap-2 items-start p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+            <div className="text-xs text-red-700 dark:text-red-300 space-y-1.5">
+              <p className="font-semibold">Is your domain already on Cloudflare?</p>
+              <p>
+                A plain CNAME to <code className="font-mono">cname.mdl.cc</code> will fail with{' '}
+                <strong>Error 1014 — CNAME Cross-User Banned</strong>, because Cloudflare blocks
+                CNAMEs that cross accounts. Do one of the following:
+              </p>
+              <ul className="list-disc pl-4 space-y-0.5">
+                <li>
+                  Set the CNAME record to <strong>DNS only</strong> (grey cloud, proxy disabled)
+                  in your Cloudflare dashboard, <em>or</em>
+                </li>
+                <li>
+                  Contact support so we can pre-authorize your hostname via Cloudflare SSL for
+                  SaaS — keep the <code className="font-mono">_mdl-verify</code> TXT record in
+                  place so we can validate ownership.
+                </li>
+              </ul>
+            </div>
+          </div>
+
           <div className="flex gap-2 items-start p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
             <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <p className="text-xs text-amber-700 dark:text-amber-300">
-              DNS changes can take up to 48 hours to propagate globally. Click <strong>Verify</strong> once you've added the record.
+              DNS changes can take up to 48 hours to propagate globally. Click <strong>Verify</strong> once you've added both records.
             </p>
           </div>
           <p className="text-xs text-dark-500 dark:text-dark-400">
             Need help?{' '}
-            <a href="#" className="text-primary-600 dark:text-primary-400 underline underline-offset-2">
+            <a href="mailto:support@mdl.cc" className="text-primary-600 dark:text-primary-400 underline underline-offset-2">
               Contact support
             </a>
           </p>
