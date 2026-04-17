@@ -20,6 +20,25 @@ export async function createLink(request: Request, env: Env): Promise<Response> 
     if (!body.url || !isValidUrl(body.url)) {
       return errorResponse('Invalid URL provided');
     }
+    if (!body.workspace_id) {
+      return errorResponse('workspace_id is required', 400);
+    }
+
+    // Resolve domain (must belong to the same workspace as the link) and pick the
+    // KV key space. Branded links are keyed per workspace so two workspaces can
+    // own the same short_code on different hostnames without colliding.
+    let domainId: string | null = null;
+    let brandedHost: string | null = null;
+    if (body.domain_id) {
+      const domainRow = await env.DB.prepare(
+        'SELECT id, domain, workspace_id FROM domains WHERE id = ? AND workspace_id = ?',
+      ).bind(body.domain_id, body.workspace_id).first<{ id: string; domain: string; workspace_id: string }>();
+      if (!domainRow) return errorResponse('Domain not found for this workspace', 400);
+      domainId = domainRow.id;
+      brandedHost = domainRow.domain;
+    }
+
+    const kvKeyFor = (code: string) => brandedHost ? `ws:${body.workspace_id}:${code}` : code;
 
     // Generate or validate short code
     let shortCode = body.custom_code || generateShortCode();
@@ -28,41 +47,23 @@ export async function createLink(request: Request, env: Env): Promise<Response> 
       if (!isValidShortCode(body.custom_code)) {
         return errorResponse('Invalid custom code. Use 3-50 alphanumeric characters, hyphens, or underscores.');
       }
-
-      // Check if code already exists
-      const existing = await env.URL_KV.get(body.custom_code);
-      if (existing) {
-        return errorResponse('This custom code is already in use');
-      }
+      const existing = await env.URL_KV.get(kvKeyFor(body.custom_code));
+      if (existing) return errorResponse('This custom code is already in use');
     } else {
-      // Ensure generated code is unique
       let attempts = 0;
       while (attempts < 5) {
-        const existing = await env.URL_KV.get(shortCode);
+        const existing = await env.URL_KV.get(kvKeyFor(shortCode));
         if (!existing) break;
         shortCode = generateShortCode();
         attempts++;
       }
     }
 
-    // Auto-fetch title if not provided
     const title = body.title || (await fetchPageTitle(body.url));
 
     const id = generateId();
     const now = new Date().toISOString();
 
-    // Validate domain_id: only use it if it actually exists in the domains table.
-    // Custom domains stored locally in the webapp have client-generated UUIDs that
-    // don't exist in the DB, so we bypass the FK constraint by falling back to null.
-    let domainId: string | null = null;
-    if (body.domain_id) {
-      const domainRow = await env.DB.prepare('SELECT id FROM domains WHERE id = ?')
-        .bind(body.domain_id)
-        .first<{ id: string }>();
-      if (domainRow) domainId = domainRow.id;
-    }
-
-    // Insert into D1
     await env.DB.prepare(
       `INSERT INTO links (id, short_code, original_url, title, description, group_id, domain_id, workspace_id, password, expires_at, is_active, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`
@@ -75,7 +76,7 @@ export async function createLink(request: Request, env: Env): Promise<Response> 
         body.description || null,
         body.group_id || null,
         domainId,
-        body.workspace_id || null,
+        body.workspace_id,
         body.password || null,
         body.expires_at || null,
         now,
@@ -83,7 +84,6 @@ export async function createLink(request: Request, env: Env): Promise<Response> 
       )
       .run();
 
-    // Store in KV for fast redirects
     const kvData: KVLinkData = {
       url: body.url,
       password: body.password,
@@ -92,7 +92,7 @@ export async function createLink(request: Request, env: Env): Promise<Response> 
       link_id: id,
     };
 
-    await env.URL_KV.put(shortCode, JSON.stringify(kvData));
+    await env.URL_KV.put(kvKeyFor(shortCode), JSON.stringify(kvData));
 
     // Handle tags
     if (body.tags && body.tags.length > 0) {
@@ -120,13 +120,11 @@ export async function createLink(request: Request, env: Env): Promise<Response> 
 
     const link = await env.DB.prepare('SELECT * FROM links WHERE id = ?').bind(id).first<Link>();
 
-    return successResponse(
-      {
-        ...link,
-        short_url: `https://mdl.cc/m/${shortCode}`,
-      },
-      'Link created successfully'
-    );
+    const short_url = brandedHost
+      ? `https://${brandedHost}/${shortCode}`
+      : `https://mdl.cc/m${shortCode}`;
+
+    return successResponse({ ...link, short_url }, 'Link created successfully');
   } catch (error) {
     console.error('Error creating link:', error);
     return errorResponse('Failed to create link', 500);
@@ -146,15 +144,19 @@ export async function getLinks(request: Request, env: Env): Promise<Response> {
     let query = `
       SELECT l.*,
         COALESCE((SELECT SUM(click_count) FROM daily_stats WHERE link_id = l.id), 0) as click_count,
-        g.name as group_name, g.color as group_color
+        g.name as group_name, g.color as group_color,
+        d.domain as domain_host
       FROM links l
       LEFT JOIN link_groups g ON l.group_id = g.id
+      LEFT JOIN domains     d ON l.domain_id = d.id
       WHERE 1=1
     `;
     const params: (string | number)[] = [];
 
+    // Strict workspace scoping — no NULL fallback. Unassigned rows are a bug,
+    // not a feature, and leak across workspaces.
     if (workspaceId) {
-      query += ' AND (l.workspace_id = ? OR l.workspace_id IS NULL)';
+      query += ' AND l.workspace_id = ?';
       params.push(workspaceId);
     }
 
@@ -172,14 +174,20 @@ export async function getLinks(request: Request, env: Env): Promise<Response> {
     query += ' ORDER BY l.created_at DESC LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
-    const links = await env.DB.prepare(query).bind(...params).all();
+    const links = await env.DB.prepare(query).bind(...params).all<
+      Link & { click_count: number; group_name: string | null; group_color: string | null; domain_host: string | null }
+    >();
+    const decorated = links.results.map(l => ({
+      ...l,
+      short_url: l.domain_host ? `https://${l.domain_host}/${l.short_code}` : `https://mdl.cc/m${l.short_code}`,
+    }));
 
-    // Get total count
+    // Count uses the same scoping rules as the list query.
     let countQuery = 'SELECT COUNT(*) as total FROM links WHERE 1=1';
     const countParams: (string | number)[] = [];
 
     if (workspaceId) {
-      countQuery += ' AND (workspace_id = ? OR workspace_id IS NULL)';
+      countQuery += ' AND workspace_id = ?';
       countParams.push(workspaceId);
     }
 
@@ -197,7 +205,7 @@ export async function getLinks(request: Request, env: Env): Promise<Response> {
     const countResult = await env.DB.prepare(countQuery).bind(...countParams).first<{ total: number }>();
 
     return successResponse({
-      links: links.results,
+      links: decorated,
       pagination: {
         page,
         limit,
@@ -216,19 +224,20 @@ export async function getLink(linkId: string, env: Env): Promise<Response> {
     const link = await env.DB.prepare(
       `SELECT l.*,
         COALESCE((SELECT SUM(click_count) FROM daily_stats WHERE link_id = l.id), 0) as click_count,
-        g.name as group_name, g.color as group_color
+        g.name as group_name, g.color as group_color,
+        d.domain as domain_host
        FROM links l
        LEFT JOIN link_groups g ON l.group_id = g.id
+       LEFT JOIN domains     d ON l.domain_id = d.id
        WHERE l.id = ?`
     )
       .bind(linkId)
-      .first();
+      .first<Link & { domain_host: string | null }>();
 
     if (!link) {
       return errorResponse('Link not found', 404);
     }
 
-    // Get tags
     const tags = await env.DB.prepare(
       `SELECT t.* FROM tags t
        JOIN link_tags lt ON t.id = lt.tag_id
@@ -237,10 +246,14 @@ export async function getLink(linkId: string, env: Env): Promise<Response> {
       .bind(linkId)
       .all<Tag>();
 
+    const short_url = link.domain_host
+      ? `https://${link.domain_host}/${link.short_code}`
+      : `https://mdl.cc/m${link.short_code}`;
+
     return successResponse({
       ...link,
       tags: tags.results,
-      short_url: `https://mdl.cc/${link.short_code}`,
+      short_url,
     });
   } catch (error) {
     console.error('Error fetching link:', error);
@@ -252,8 +265,11 @@ export async function updateLink(linkId: string, request: Request, env: Env): Pr
   try {
     const body = await request.json<UpdateLinkRequest>();
 
-    // Get existing link
-    const existing = await env.DB.prepare('SELECT * FROM links WHERE id = ?').bind(linkId).first<Link>();
+    const existing = await env.DB.prepare(
+      `SELECT l.*, d.domain as domain_host
+       FROM links l LEFT JOIN domains d ON l.domain_id = d.id
+       WHERE l.id = ?`,
+    ).bind(linkId).first<Link & { domain_host: string | null }>();
 
     if (!existing) {
       return errorResponse('Link not found', 404);
@@ -313,7 +329,11 @@ export async function updateLink(linkId: string, request: Request, env: Env): Pr
         link_id: linkId,
       };
 
-      await env.URL_KV.put(existing.short_code, JSON.stringify(kvData));
+      // Honour workspace-namespaced KV keys for branded links.
+      const kvKey = existing.domain_host
+        ? `ws:${existing.workspace_id}:${existing.short_code}`
+        : existing.short_code;
+      await env.URL_KV.put(kvKey, JSON.stringify(kvData));
     }
 
     const updated = await env.DB.prepare('SELECT * FROM links WHERE id = ?').bind(linkId).first<Link>();
@@ -327,16 +347,19 @@ export async function updateLink(linkId: string, request: Request, env: Env): Pr
 
 export async function deleteLink(linkId: string, env: Env): Promise<Response> {
   try {
-    const link = await env.DB.prepare('SELECT short_code FROM links WHERE id = ?').bind(linkId).first<{ short_code: string }>();
+    const link = await env.DB.prepare(
+      `SELECT l.short_code, l.workspace_id, d.domain as domain_host
+       FROM links l LEFT JOIN domains d ON l.domain_id = d.id
+       WHERE l.id = ?`,
+    ).bind(linkId).first<{ short_code: string; workspace_id: string; domain_host: string | null }>();
 
     if (!link) {
       return errorResponse('Link not found', 404);
     }
 
-    // Delete from KV
-    await env.URL_KV.delete(link.short_code);
+    const kvKey = link.domain_host ? `ws:${link.workspace_id}:${link.short_code}` : link.short_code;
+    await env.URL_KV.delete(kvKey);
 
-    // Delete from D1 (cascades to link_tags, clicks, etc.)
     await env.DB.prepare('DELETE FROM links WHERE id = ?').bind(linkId).run();
 
     return successResponse(null, 'Link deleted successfully');
@@ -543,9 +566,9 @@ export async function getDashboardStats(request: Request, env: Env): Promise<Res
     const url = new URL(request.url);
     const workspaceId = url.searchParams.get('workspace_id');
 
-    // When workspace_id is supplied, include links in that workspace OR unassigned (NULL) links.
-    // Unassigned links are "legacy" links created before workspace support and belong to all workspaces.
-    const wsLinkFilter = workspaceId ? '(workspace_id = ? OR workspace_id IS NULL)' : '1=1';
+    // Strict workspace scoping. NULL workspace_id rows should never exist after
+    // migration 0002; filtering them in rather than out prevents cross-tenant leakage.
+    const wsLinkFilter = workspaceId ? 'workspace_id = ?' : '1=1';
     const b = (ws: string | null) => (ws ? [ws] : []) as (string | number)[];
 
     const totalLinks = await env.DB.prepare(

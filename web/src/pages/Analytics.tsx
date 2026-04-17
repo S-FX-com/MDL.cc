@@ -8,7 +8,7 @@ import {
   Monitor,
   ArrowUpRight,
 } from 'lucide-react';
-import { stats, DashboardStats } from '../lib/api';
+import { stats, DashboardStats, shortLinkDisplay } from '../lib/api';
 import {
   XAxis,
   YAxis,
@@ -18,23 +18,22 @@ import {
   Area,
 } from 'recharts';
 import { format, parseISO, subDays } from 'date-fns';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 
 export default function Analytics() {
+  const { activeWorkspaceId } = useWorkspace();
   const [data, setData] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadStats();
-  }, []);
-
-  const loadStats = async () => {
+    let cancelled = false;
     setLoading(true);
-    const response = await stats.dashboard();
-    if (response.success && response.data) {
-      setData(response.data);
-    }
-    setLoading(false);
-  };
+    stats.dashboard(activeWorkspaceId || undefined).then((response) => {
+      if (!cancelled && response.success && response.data) setData(response.data);
+      if (!cancelled) setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [activeWorkspaceId]);
 
   // Generate last 7 days for empty state
   const emptyChartData = Array.from({ length: 7 }, (_, i) => ({
@@ -199,7 +198,7 @@ export default function Analytics() {
                     </span>
                     <div className="min-w-0">
                       <p className="font-medium text-primary-500 truncate">
-                        mdl.cc/m/{link.short_code}
+                        {shortLinkDisplay(link)}
                       </p>
                       <p className="text-sm text-dark-500 dark:text-dark-400 truncate">
                         {link.title || link.original_url}
@@ -234,7 +233,7 @@ export default function Analytics() {
                 >
                   <div className="min-w-0">
                     <p className="font-medium text-primary-500 truncate">
-                      mdl.cc/m/{link.short_code}
+                      {shortLinkDisplay(link)}
                     </p>
                     <p className="text-sm text-dark-500 dark:text-dark-400 truncate">
                       {link.title || link.original_url}

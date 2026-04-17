@@ -214,3 +214,41 @@ export const qr = {
     return `${API_BASE}/qr?${params.toString()}`;
   },
 };
+
+// Domains
+export interface Domain {
+  id: string;
+  workspace_id: string;
+  domain: string;
+  verified: boolean;
+  is_default: boolean;
+  verify_token: string | null;
+  verify_host: string;
+  created_at: string;
+  verified_at: string | null;
+}
+
+export const domains = {
+  list: () => request<Domain[]>('/domains'),
+
+  create: (payload: { domain: string; workspace_id: string }) =>
+    request<Domain>('/domains', { method: 'POST', body: JSON.stringify(payload) }),
+
+  verify: (id: string) =>
+    request<Domain>(`/domains/${id}/verify`, { method: 'POST' }),
+
+  setDefault: (id: string) =>
+    request<Domain>(`/domains/${id}/default`, { method: 'POST' }),
+
+  delete: (id: string) =>
+    request<null>(`/domains/${id}`, { method: 'DELETE' }),
+};
+
+// Canonical short URL helpers. Always prefer the server-supplied short_url
+// (which accounts for branded domains), fall back to mdl.cc/m{code}.
+export function shortLinkHref(link: Pick<Link, 'short_url' | 'short_code'>): string {
+  return link.short_url ?? `https://mdl.cc/m${link.short_code}`;
+}
+export function shortLinkDisplay(link: Pick<Link, 'short_url' | 'short_code'>): string {
+  return shortLinkHref(link).replace(/^https?:\/\//, '');
+}

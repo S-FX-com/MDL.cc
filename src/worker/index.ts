@@ -2,7 +2,7 @@
 // "The middle-point between you and your audience"
 
 import { Env } from './types';
-import { handleRedirect } from './handlers/redirect';
+import { routeRedirect } from './handlers/redirect';
 import {
   createLink,
   getLinks,
@@ -18,6 +18,13 @@ import {
   getTags,
   createTag,
 } from './handlers/api';
+import {
+  listDomains,
+  createDomain,
+  verifyDomain,
+  setDefaultDomain,
+  deleteDomain,
+} from './handlers/domains';
 import { generateQR, saveQRConfig } from './handlers/qr';
 import { sendInviteEmail, validateInvite, acceptInvite, getWorkspaceInvitations, cancelInvitation } from './handlers/email';
 import { register, login, getMe, updateProfile } from './handlers/auth';
@@ -163,12 +170,31 @@ export default {
         return cancelInvitation(wsInviteCancelMatch[1], wsInviteCancelMatch[2], request, env);
       }
 
-      // ============ URL Redirect ============
+      // ============ Domains ============
+      if (path === '/api/domains') {
+        if (method === 'GET')  return listDomains(request, env);
+        if (method === 'POST') return createDomain(request, env);
+      }
+      const domainVerifyMatch = path.match(/^\/api\/domains\/([^/]+)\/verify$/);
+      if (domainVerifyMatch && method === 'POST') {
+        return verifyDomain(domainVerifyMatch[1], request, env);
+      }
+      const domainDefaultMatch = path.match(/^\/api\/domains\/([^/]+)\/default$/);
+      if (domainDefaultMatch && method === 'POST') {
+        return setDefaultDomain(domainDefaultMatch[1], request, env);
+      }
+      const domainMatch = path.match(/^\/api\/domains\/([^/]+)$/);
+      if (domainMatch && method === 'DELETE') {
+        return deleteDomain(domainMatch[1], request, env);
+      }
 
-      // Short links live at /m/{code} — unambiguous, never conflicts with app routes
-      const shortCodeMatch = path.match(/^\/m\/([a-zA-Z0-9_-]+)$/);
-      if (shortCodeMatch && method === 'GET') {
-        return handleRedirect(shortCodeMatch[1], request, env);
+      // ============ URL Redirect ============
+      //
+      // mdl.cc/m{code}  — default shared domain; "/m" prefix keeps app routes safe.
+      // <branded>/{code} — full hostname dedicated to one workspace.
+      if (method === 'GET') {
+        const redirect = await routeRedirect(request, env);
+        if (redirect) return redirect;
       }
 
       // SPA fallback - serve real index.html for client-side routing
