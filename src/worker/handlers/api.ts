@@ -526,35 +526,61 @@ export async function getLinkAnalytics(linkId: string, request: Request, env: En
   }
 }
 
-export async function getDashboardStats(env: Env): Promise<Response> {
+export async function getDashboardStats(request: Request, env: Env): Promise<Response> {
   try {
-    const totalLinks = await env.DB.prepare('SELECT COUNT(*) as count FROM links').first<{ count: number }>();
+    const url = new URL(request.url);
+    const linkIdsParam = url.searchParams.get('link_ids');
+    const linkIds = linkIdsParam ? linkIdsParam.split(',').filter(Boolean) : null;
 
-    const totalClicks = await env.DB.prepare(
-      'SELECT COALESCE(SUM(click_count), 0) as count FROM daily_stats'
-    ).first<{ count: number }>();
+    const hasFilter = linkIds && linkIds.length > 0;
 
-    const todayClicks = await env.DB.prepare(
-      `SELECT COALESCE(SUM(click_count), 0) as count FROM daily_stats WHERE date = date('now')`
-    ).first<{ count: number }>();
+    const placeholders = hasFilter ? linkIds!.map(() => '?').join(',') : '';
 
-    const recentLinks = await env.DB.prepare(
-      `SELECT l.*, COALESCE((SELECT SUM(click_count) FROM daily_stats WHERE link_id = l.id), 0) as click_count
-       FROM links l ORDER BY created_at DESC LIMIT 5`
-    ).all();
+    const totalLinks = hasFilter
+      ? await env.DB.prepare(`SELECT COUNT(*) as count FROM links WHERE id IN (${placeholders})`).bind(...linkIds!).first<{ count: number }>()
+      : await env.DB.prepare('SELECT COUNT(*) as count FROM links').first<{ count: number }>();
 
-    const topLinks = await env.DB.prepare(
-      `SELECT l.*, COALESCE((SELECT SUM(click_count) FROM daily_stats WHERE link_id = l.id), 0) as click_count
-       FROM links l ORDER BY click_count DESC LIMIT 5`
-    ).all();
+    const totalClicks = hasFilter
+      ? await env.DB.prepare(`SELECT COALESCE(SUM(click_count), 0) as count FROM daily_stats WHERE link_id IN (${placeholders})`).bind(...linkIds!).first<{ count: number }>()
+      : await env.DB.prepare('SELECT COALESCE(SUM(click_count), 0) as count FROM daily_stats').first<{ count: number }>();
 
-    // Clicks over last 7 days
-    const weeklyClicks = await env.DB.prepare(
-      `SELECT date, COALESCE(SUM(click_count), 0) as count
-       FROM daily_stats
-       WHERE date > date('now', '-7 days')
-       GROUP BY date ORDER BY date ASC`
-    ).all<{ date: string; count: number }>();
+    const todayClicks = hasFilter
+      ? await env.DB.prepare(`SELECT COALESCE(SUM(click_count), 0) as count FROM daily_stats WHERE date = date('now') AND link_id IN (${placeholders})`).bind(...linkIds!).first<{ count: number }>()
+      : await env.DB.prepare(`SELECT COALESCE(SUM(click_count), 0) as count FROM daily_stats WHERE date = date('now')`).first<{ count: number }>();
+
+    const recentLinks = hasFilter
+      ? await env.DB.prepare(
+          `SELECT l.*, COALESCE((SELECT SUM(click_count) FROM daily_stats WHERE link_id = l.id), 0) as click_count
+           FROM links l WHERE l.id IN (${placeholders}) ORDER BY created_at DESC LIMIT 5`
+        ).bind(...linkIds!).all()
+      : await env.DB.prepare(
+          `SELECT l.*, COALESCE((SELECT SUM(click_count) FROM daily_stats WHERE link_id = l.id), 0) as click_count
+           FROM links l ORDER BY created_at DESC LIMIT 5`
+        ).all();
+
+    const topLinks = hasFilter
+      ? await env.DB.prepare(
+          `SELECT l.*, COALESCE((SELECT SUM(click_count) FROM daily_stats WHERE link_id = l.id), 0) as click_count
+           FROM links l WHERE l.id IN (${placeholders}) ORDER BY click_count DESC LIMIT 5`
+        ).bind(...linkIds!).all()
+      : await env.DB.prepare(
+          `SELECT l.*, COALESCE((SELECT SUM(click_count) FROM daily_stats WHERE link_id = l.id), 0) as click_count
+           FROM links l ORDER BY click_count DESC LIMIT 5`
+        ).all();
+
+    const weeklyClicks = hasFilter
+      ? await env.DB.prepare(
+          `SELECT date, COALESCE(SUM(click_count), 0) as count
+           FROM daily_stats
+           WHERE date > date('now', '-7 days') AND link_id IN (${placeholders})
+           GROUP BY date ORDER BY date ASC`
+        ).bind(...linkIds!).all<{ date: string; count: number }>()
+      : await env.DB.prepare(
+          `SELECT date, COALESCE(SUM(click_count), 0) as count
+           FROM daily_stats
+           WHERE date > date('now', '-7 days')
+           GROUP BY date ORDER BY date ASC`
+        ).all<{ date: string; count: number }>();
 
     return successResponse({
       total_links: totalLinks?.count || 0,

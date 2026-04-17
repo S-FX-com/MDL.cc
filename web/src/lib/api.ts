@@ -196,7 +196,10 @@ export interface DashboardStats {
 }
 
 export const stats = {
-  dashboard: () => request<DashboardStats>('/stats'),
+  dashboard: (linkIds?: string[]) => {
+    const qs = linkIds && linkIds.length > 0 ? `?link_ids=${linkIds.join(',')}` : '';
+    return request<DashboardStats>(`/stats${qs}`);
+  },
 };
 
 // QR Code

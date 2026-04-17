@@ -5,6 +5,7 @@ import { stats, DashboardStats } from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../contexts/ThemeContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 
 // Minimax-style stat accent colors
 const STATS = [
@@ -37,14 +38,18 @@ const STATS = [
 export default function Dashboard() {
   const { theme } = useTheme();
   const dark = theme === 'dark';
+  const { activeWorkspaceId, linkWorkspaces } = useWorkspace();
   const [data, setData] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { loadStats(); }, []);
+  useEffect(() => { loadStats(); }, [activeWorkspaceId, linkWorkspaces]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadStats = async () => {
     setLoading(true);
-    const response = await stats.dashboard();
+    const wsLinkIds = Object.entries(linkWorkspaces)
+      .filter(([, wsId]) => wsId === activeWorkspaceId)
+      .map(([linkId]) => linkId);
+    const response = await stats.dashboard(wsLinkIds.length > 0 ? wsLinkIds : undefined);
     if (response.success && response.data) setData(response.data);
     setLoading(false);
   };
