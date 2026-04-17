@@ -70,7 +70,7 @@ export default {
 
       // Dashboard stats
       if (path === '/api/stats' && method === 'GET') {
-        return getDashboardStats(env);
+        return getDashboardStats(request, env);
       }
 
       // Links CRUD
