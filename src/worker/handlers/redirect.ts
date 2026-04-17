@@ -227,7 +227,7 @@ function createPasswordPage(shortCode: string): Response {
     <div class="tagline">The middle-point between you and your destination</div>
     <div class="lock-icon">🔒</div>
     <h1>This link is password protected</h1>
-    <form action="/${shortCode}" method="GET">
+    <form action="/m/${shortCode}" method="GET">
       <input type="password" name="p" placeholder="Enter password" required autofocus>
       <button type="submit">Access Link →</button>
     </form>

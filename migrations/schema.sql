@@ -34,12 +34,35 @@ CREATE TABLE IF NOT EXISTS link_groups (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Workspaces
+CREATE TABLE IF NOT EXISTS workspaces (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE NOT NULL,
+    owner_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS workspace_members (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'member',
+    joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(workspace_id, user_id)
+);
+
 -- Links table
 CREATE TABLE IF NOT EXISTS links (
     id TEXT PRIMARY KEY,
     user_id TEXT,
     group_id TEXT,
     domain_id TEXT,
+    workspace_id TEXT,
     short_code TEXT NOT NULL,
     original_url TEXT NOT NULL,
     title TEXT,
@@ -51,7 +74,8 @@ CREATE TABLE IF NOT EXISTS links (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (group_id) REFERENCES link_groups(id) ON DELETE SET NULL,
-    FOREIGN KEY (domain_id) REFERENCES domains(id) ON DELETE SET NULL
+    FOREIGN KEY (domain_id) REFERENCES domains(id) ON DELETE SET NULL,
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE SET NULL
 );
 
 -- Create index for fast short_code lookups

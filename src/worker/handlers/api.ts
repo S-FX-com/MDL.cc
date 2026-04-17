@@ -64,8 +64,8 @@ export async function createLink(request: Request, env: Env): Promise<Response> 
 
     // Insert into D1
     await env.DB.prepare(
-      `INSERT INTO links (id, short_code, original_url, title, description, group_id, domain_id, password, expires_at, is_active, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`
+      `INSERT INTO links (id, short_code, original_url, title, description, group_id, domain_id, workspace_id, password, expires_at, is_active, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`
     )
       .bind(
         id,
@@ -75,6 +75,7 @@ export async function createLink(request: Request, env: Env): Promise<Response> 
         body.description || null,
         body.group_id || null,
         domainId,
+        body.workspace_id || null,
         body.password || null,
         body.expires_at || null,
         now,
@@ -122,7 +123,7 @@ export async function createLink(request: Request, env: Env): Promise<Response> 
     return successResponse(
       {
         ...link,
-        short_url: `https://mdl.cc/${shortCode}`,
+        short_url: `https://mdl.cc/m/${shortCode}`,
       },
       'Link created successfully'
     );
@@ -139,6 +140,7 @@ export async function getLinks(request: Request, env: Env): Promise<Response> {
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
     const groupId = url.searchParams.get('group_id');
     const search = url.searchParams.get('search');
+    const workspaceId = url.searchParams.get('workspace_id');
     const offset = (page - 1) * limit;
 
     let query = `
@@ -150,6 +152,11 @@ export async function getLinks(request: Request, env: Env): Promise<Response> {
       WHERE 1=1
     `;
     const params: (string | number)[] = [];
+
+    if (workspaceId) {
+      query += ' AND (l.workspace_id = ? OR l.workspace_id IS NULL)';
+      params.push(workspaceId);
+    }
 
     if (groupId) {
       query += ' AND l.group_id = ?';
@@ -170,6 +177,11 @@ export async function getLinks(request: Request, env: Env): Promise<Response> {
     // Get total count
     let countQuery = 'SELECT COUNT(*) as total FROM links WHERE 1=1';
     const countParams: (string | number)[] = [];
+
+    if (workspaceId) {
+      countQuery += ' AND (workspace_id = ? OR workspace_id IS NULL)';
+      countParams.push(workspaceId);
+    }
 
     if (groupId) {
       countQuery += ' AND group_id = ?';
@@ -529,58 +541,48 @@ export async function getLinkAnalytics(linkId: string, request: Request, env: En
 export async function getDashboardStats(request: Request, env: Env): Promise<Response> {
   try {
     const url = new URL(request.url);
-    const linkIdsParam = url.searchParams.get('link_ids');
-    const linkIds = linkIdsParam ? linkIdsParam.split(',').filter(Boolean) : null;
+    const workspaceId = url.searchParams.get('workspace_id');
 
-    const hasFilter = linkIds && linkIds.length > 0;
+    // When workspace_id is supplied, include links in that workspace OR unassigned (NULL) links.
+    // Unassigned links are "legacy" links created before workspace support and belong to all workspaces.
+    const wsLinkFilter = workspaceId ? '(workspace_id = ? OR workspace_id IS NULL)' : '1=1';
+    const b = (ws: string | null) => (ws ? [ws] : []) as (string | number)[];
 
-    const placeholders = hasFilter ? linkIds!.map(() => '?').join(',') : '';
+    const totalLinks = await env.DB.prepare(
+      `SELECT COUNT(*) as count FROM links WHERE ${wsLinkFilter}`
+    ).bind(...b(workspaceId)).first<{ count: number }>();
 
-    const totalLinks = hasFilter
-      ? await env.DB.prepare(`SELECT COUNT(*) as count FROM links WHERE id IN (${placeholders})`).bind(...linkIds!).first<{ count: number }>()
-      : await env.DB.prepare('SELECT COUNT(*) as count FROM links').first<{ count: number }>();
+    const totalClicks = await env.DB.prepare(
+      `SELECT COALESCE(SUM(ds.click_count), 0) as count
+       FROM daily_stats ds
+       JOIN links l ON ds.link_id = l.id
+       WHERE ${wsLinkFilter}`
+    ).bind(...b(workspaceId)).first<{ count: number }>();
 
-    const totalClicks = hasFilter
-      ? await env.DB.prepare(`SELECT COALESCE(SUM(click_count), 0) as count FROM daily_stats WHERE link_id IN (${placeholders})`).bind(...linkIds!).first<{ count: number }>()
-      : await env.DB.prepare('SELECT COALESCE(SUM(click_count), 0) as count FROM daily_stats').first<{ count: number }>();
+    const todayClicks = await env.DB.prepare(
+      `SELECT COALESCE(SUM(ds.click_count), 0) as count
+       FROM daily_stats ds
+       JOIN links l ON ds.link_id = l.id
+       WHERE ds.date = date('now') AND ${wsLinkFilter}`
+    ).bind(...b(workspaceId)).first<{ count: number }>();
 
-    const todayClicks = hasFilter
-      ? await env.DB.prepare(`SELECT COALESCE(SUM(click_count), 0) as count FROM daily_stats WHERE date = date('now') AND link_id IN (${placeholders})`).bind(...linkIds!).first<{ count: number }>()
-      : await env.DB.prepare(`SELECT COALESCE(SUM(click_count), 0) as count FROM daily_stats WHERE date = date('now')`).first<{ count: number }>();
+    const recentLinks = await env.DB.prepare(
+      `SELECT l.*, COALESCE((SELECT SUM(click_count) FROM daily_stats WHERE link_id = l.id), 0) as click_count
+       FROM links l WHERE ${wsLinkFilter} ORDER BY l.created_at DESC LIMIT 5`
+    ).bind(...b(workspaceId)).all();
 
-    const recentLinks = hasFilter
-      ? await env.DB.prepare(
-          `SELECT l.*, COALESCE((SELECT SUM(click_count) FROM daily_stats WHERE link_id = l.id), 0) as click_count
-           FROM links l WHERE l.id IN (${placeholders}) ORDER BY created_at DESC LIMIT 5`
-        ).bind(...linkIds!).all()
-      : await env.DB.prepare(
-          `SELECT l.*, COALESCE((SELECT SUM(click_count) FROM daily_stats WHERE link_id = l.id), 0) as click_count
-           FROM links l ORDER BY created_at DESC LIMIT 5`
-        ).all();
+    const topLinks = await env.DB.prepare(
+      `SELECT l.*, COALESCE((SELECT SUM(click_count) FROM daily_stats WHERE link_id = l.id), 0) as click_count
+       FROM links l WHERE ${wsLinkFilter} ORDER BY click_count DESC LIMIT 5`
+    ).bind(...b(workspaceId)).all();
 
-    const topLinks = hasFilter
-      ? await env.DB.prepare(
-          `SELECT l.*, COALESCE((SELECT SUM(click_count) FROM daily_stats WHERE link_id = l.id), 0) as click_count
-           FROM links l WHERE l.id IN (${placeholders}) ORDER BY click_count DESC LIMIT 5`
-        ).bind(...linkIds!).all()
-      : await env.DB.prepare(
-          `SELECT l.*, COALESCE((SELECT SUM(click_count) FROM daily_stats WHERE link_id = l.id), 0) as click_count
-           FROM links l ORDER BY click_count DESC LIMIT 5`
-        ).all();
-
-    const weeklyClicks = hasFilter
-      ? await env.DB.prepare(
-          `SELECT date, COALESCE(SUM(click_count), 0) as count
-           FROM daily_stats
-           WHERE date > date('now', '-7 days') AND link_id IN (${placeholders})
-           GROUP BY date ORDER BY date ASC`
-        ).bind(...linkIds!).all<{ date: string; count: number }>()
-      : await env.DB.prepare(
-          `SELECT date, COALESCE(SUM(click_count), 0) as count
-           FROM daily_stats
-           WHERE date > date('now', '-7 days')
-           GROUP BY date ORDER BY date ASC`
-        ).all<{ date: string; count: number }>();
+    const weeklyClicks = await env.DB.prepare(
+      `SELECT ds.date, COALESCE(SUM(ds.click_count), 0) as count
+       FROM daily_stats ds
+       JOIN links l ON ds.link_id = l.id
+       WHERE ds.date > date('now', '-7 days') AND ${wsLinkFilter}
+       GROUP BY ds.date ORDER BY ds.date ASC`
+    ).bind(...b(workspaceId)).all<{ date: string; count: number }>();
 
     return successResponse({
       total_links: totalLinks?.count || 0,

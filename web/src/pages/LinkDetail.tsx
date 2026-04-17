@@ -76,7 +76,7 @@ export default function LinkDetail() {
 
   const copyLink = async () => {
     if (link) {
-      await navigator.clipboard.writeText(`https://mdl.cc/${link.short_code}`);
+      await navigator.clipboard.writeText(`https://mdl.cc/m/${link.short_code}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -146,7 +146,7 @@ export default function LinkDetail() {
               </h1>
             )}
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-primary-500 font-medium">mdl.cc/{link.short_code}</span>
+              <span className="text-primary-500 font-medium">mdl.cc/m/{link.short_code}</span>
               <button
                 onClick={copyLink}
                 className="p-1 rounded hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
@@ -158,7 +158,7 @@ export default function LinkDetail() {
                 )}
               </button>
               <a
-                href={`https://mdl.cc/${link.short_code}`}
+                href={`https://mdl.cc/m/${link.short_code}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1 rounded hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
@@ -389,7 +389,7 @@ export default function LinkDetail() {
               QR Code
             </h3>
             <div ref={qrRef} className="bg-white p-4 rounded-lg flex items-center justify-center">
-              <QRCodeDisplay value={`https://mdl.cc/${link.short_code}`} size={192} />
+              <QRCodeDisplay value={`https://mdl.cc/m/${link.short_code}`} size={192} />
             </div>
             <button onClick={downloadQRSvg} className="btn btn-secondary w-full mt-4">
               <Download className="w-4 h-4" />

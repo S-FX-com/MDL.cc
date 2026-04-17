@@ -54,6 +54,7 @@ export interface CreateLinkPayload {
   description?: string;
   group_id?: string;
   domain_id?: string;
+  workspace_id?: string;
   password?: string;
   expires_at?: string;
   tags?: string[];
@@ -81,12 +82,13 @@ export interface LinksResponse {
 }
 
 export const links = {
-  list: (params?: { page?: number; limit?: number; group_id?: string; search?: string }) => {
+  list: (params?: { page?: number; limit?: number; group_id?: string; search?: string; workspace_id?: string }) => {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', String(params.page));
     if (params?.limit) searchParams.set('limit', String(params.limit));
     if (params?.group_id) searchParams.set('group_id', params.group_id);
     if (params?.search) searchParams.set('search', params.search);
+    if (params?.workspace_id) searchParams.set('workspace_id', params.workspace_id);
     const query = searchParams.toString();
     return request<LinksResponse>(`/links${query ? `?${query}` : ''}`);
   },
@@ -196,8 +198,8 @@ export interface DashboardStats {
 }
 
 export const stats = {
-  dashboard: (linkIds?: string[]) => {
-    const qs = linkIds && linkIds.length > 0 ? `?link_ids=${linkIds.join(',')}` : '';
+  dashboard: (workspaceId?: string) => {
+    const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : '';
     return request<DashboardStats>(`/stats${qs}`);
   },
 };

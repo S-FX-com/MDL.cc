@@ -17,7 +17,7 @@ interface CreateLinkModalProps {
 type QuickMode = 'confirm' | 'customize';
 
 export default function CreateLinkModal({ open, onClose, initialUrl = '', onSuccess }: CreateLinkModalProps) {
-  const { activeWorkspaceId, associateLinkWithWorkspace, customDomains, getDefaultDomain } = useWorkspace();
+  const { activeWorkspaceId, customDomains, getDefaultDomain } = useWorkspace();
   const [url, setUrl] = useState(initialUrl);
   const [customCode, setCustomCode] = useState('');
   const [title, setTitle] = useState('');
@@ -77,7 +77,7 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
     setLoading(true);
 
     try {
-      const payload: CreateLinkPayload = { url };
+      const payload: CreateLinkPayload = { url, workspace_id: activeWorkspaceId || undefined };
       if (customCode) payload.custom_code = customCode;
       if (title) payload.title = title;
       if (groupId) payload.group_id = groupId;
@@ -87,7 +87,6 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
       const response = await links.create(payload);
 
       if (response.success && response.data) {
-        associateLinkWithWorkspace(response.data.id, activeWorkspaceId);
         // If a custom domain is selected, build the short_url using it
         const selectedDomain = workspaceDomains.find(d => d.id === selectedDomainId);
         const linkData = selectedDomain
@@ -117,7 +116,7 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
 
   // ── Success screen ──────────────────────────────────────────────────────────
   if (createdLink) {
-    const shortUrl = createdLink.short_url?.replace('https://', '') ?? `mdl.cc/${createdLink.short_code}`;
+    const shortUrl = createdLink.short_url?.replace('https://', '') ?? `mdl.cc/m/${createdLink.short_code}`;
     return (
       <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
         <div className="modal-content max-w-lg">
@@ -163,7 +162,7 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
             {/* QR Code preview */}
             <div className="p-4 bg-dark-50 dark:bg-dark-800 rounded-xl flex items-center gap-4">
               <div ref={qrRef} className="w-20 h-20 rounded-lg bg-white flex items-center justify-center p-1 shrink-0">
-                <QRCodeDisplay value={`https://mdl.cc/${createdLink.short_code}`} size={72} />
+                <QRCodeDisplay value={`https://mdl.cc/m/${createdLink.short_code}`} size={72} />
               </div>
               <div className="flex-1">
                 <p className="font-medium text-dark-900 dark:text-white">QR Code</p>
