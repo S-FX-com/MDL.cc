@@ -20,7 +20,7 @@ import CreateLinkModal from '../components/CreateLinkModal';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 
 export default function Links() {
-  const { activeWorkspaceId, linkWorkspaces } = useWorkspace();
+  const { activeWorkspaceId } = useWorkspace();
   const [searchParams, setSearchParams] = useSearchParams();
   const [data, setData] = useState<LinksResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,41 +45,19 @@ export default function Links() {
 
   useEffect(() => {
     loadLinks();
-  }, [page, selectedGroup, search, activeWorkspaceId, linkWorkspaces]);
+  }, [page, selectedGroup, search, activeWorkspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadLinks = async () => {
     setLoading(true);
-    // Fetch a large page to allow client-side workspace filtering
     const response = await links.list({
-      page: 1,
-      limit: 500,
+      page,
+      limit: 20,
       group_id: selectedGroup || undefined,
       search: search || undefined,
+      workspace_id: activeWorkspaceId || undefined,
     });
     if (response.success && response.data) {
-      // Filter links to only show those belonging to the active workspace.
-      // Links with no workspace association are legacy/unassigned — show them in all workspaces.
-      const filtered = response.data.links.filter((link) => {
-        const wsId = linkWorkspaces[link.id];
-        return !wsId || wsId === activeWorkspaceId;
-      });
-
-      // Paginate the filtered results client-side
-      const limit = 20;
-      const totalFiltered = filtered.length;
-      const pages = Math.max(1, Math.ceil(totalFiltered / limit));
-      const safePage = Math.min(page, pages);
-      const pageLinks = filtered.slice((safePage - 1) * limit, safePage * limit);
-
-      setData({
-        links: pageLinks,
-        pagination: {
-          page: safePage,
-          limit,
-          total: totalFiltered,
-          pages,
-        },
-      });
+      setData(response.data);
     }
     setLoading(false);
   };
@@ -111,7 +89,7 @@ export default function Links() {
   };
 
   const copyLink = async (link: LinkType) => {
-    await navigator.clipboard.writeText(`https://mdl.cc/${link.short_code}`);
+    await navigator.clipboard.writeText(`https://mdl.cc/m/${link.short_code}`);
     setCopiedId(link.id);
     setTimeout(() => setCopiedId(null), 2000);
   };
@@ -215,7 +193,7 @@ export default function Links() {
                             to={`/links/${link.id}`}
                             className="font-medium text-primary-500 hover:text-primary-600"
                           >
-                            mdl.cc/{link.short_code}
+                            mdl.cc/m/{link.short_code}
                           </Link>
                           <button
                             onClick={() => copyLink(link)}
@@ -229,7 +207,7 @@ export default function Links() {
                             )}
                           </button>
                           <a
-                            href={`https://mdl.cc/${link.short_code}`}
+                            href={`https://mdl.cc/m/${link.short_code}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-1 rounded hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"

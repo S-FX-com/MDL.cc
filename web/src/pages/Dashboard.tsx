@@ -38,21 +38,19 @@ const STATS = [
 export default function Dashboard() {
   const { theme } = useTheme();
   const dark = theme === 'dark';
-  const { activeWorkspaceId, linkWorkspaces } = useWorkspace();
+  const { activeWorkspaceId } = useWorkspace();
   const [data, setData] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { loadStats(); }, [activeWorkspaceId, linkWorkspaces]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const loadStats = async () => {
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    const wsLinkIds = Object.entries(linkWorkspaces)
-      .filter(([, wsId]) => wsId === activeWorkspaceId)
-      .map(([linkId]) => linkId);
-    const response = await stats.dashboard(wsLinkIds.length > 0 ? wsLinkIds : undefined);
-    if (response.success && response.data) setData(response.data);
-    setLoading(false);
-  };
+    stats.dashboard(activeWorkspaceId || undefined).then((response) => {
+      if (!cancelled && response.success && response.data) setData(response.data);
+      if (!cancelled) setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [activeWorkspaceId]);
 
   if (loading) {
     return (
@@ -193,7 +191,7 @@ export default function Dashboard() {
                       {link.title || link.short_code}
                     </p>
                     <p className="text-xs truncate mt-0.5" style={{ color: '#1456f0' }}>
-                      mdl.cc/{link.short_code}
+                      mdl.cc/m/{link.short_code}
                     </p>
                   </div>
                   <div className="flex items-center gap-3 ml-4 shrink-0">
@@ -260,7 +258,7 @@ export default function Dashboard() {
                           className="text-sm font-medium"
                           style={{ color: dark ? '#60a5fa' : '#1456f0' }}
                         >
-                          mdl.cc/{link.short_code}
+                          mdl.cc/m/{link.short_code}
                         </Link>
                       </div>
                     </td>

@@ -165,18 +165,10 @@ export default {
 
       // ============ URL Redirect ============
 
-      // Check if this is a short URL redirect
-      const shortCodeMatch = path.match(/^\/([a-zA-Z0-9_-]+)$/);
+      // Short links live at /m/{code} — unambiguous, never conflicts with app routes
+      const shortCodeMatch = path.match(/^\/m\/([a-zA-Z0-9_-]+)$/);
       if (shortCodeMatch && method === 'GET') {
-        const shortCode = shortCodeMatch[1];
-
-        // Exclude API and app routes
-        if (
-          !shortCode.startsWith('api') &&
-          !['dashboard', 'login', 'signup', 'register', 'settings', 'groups', 'analytics', 'invitations', 'join', 'workspace'].includes(shortCode)
-        ) {
-          return handleRedirect(shortCode, request, env);
-        }
+        return handleRedirect(shortCodeMatch[1], request, env);
       }
 
       // SPA fallback - serve real index.html for client-side routing

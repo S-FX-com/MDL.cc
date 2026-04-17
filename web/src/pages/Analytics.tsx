@@ -199,7 +199,7 @@ export default function Analytics() {
                     </span>
                     <div className="min-w-0">
                       <p className="font-medium text-primary-500 truncate">
-                        mdl.cc/{link.short_code}
+                        mdl.cc/m/{link.short_code}
                       </p>
                       <p className="text-sm text-dark-500 dark:text-dark-400 truncate">
                         {link.title || link.original_url}
@@ -234,7 +234,7 @@ export default function Analytics() {
                 >
                   <div className="min-w-0">
                     <p className="font-medium text-primary-500 truncate">
-                      mdl.cc/{link.short_code}
+                      mdl.cc/m/{link.short_code}
                     </p>
                     <p className="text-sm text-dark-500 dark:text-dark-400 truncate">
                       {link.title || link.original_url}

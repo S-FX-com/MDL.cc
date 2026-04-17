@@ -35,6 +35,7 @@ export interface Link {
   user_id: string | null;
   group_id: string | null;
   domain_id: string | null;
+  workspace_id: string | null;
   short_code: string;
   original_url: string;
   title: string | null;
@@ -123,6 +124,7 @@ export interface CreateLinkRequest {
   description?: string;
   group_id?: string;
   domain_id?: string;
+  workspace_id?: string;
   password?: string;
   expires_at?: string;
   tags?: string[];
