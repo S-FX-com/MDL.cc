@@ -85,11 +85,17 @@ function InlineEdit({
 }
 
 // ── DNS Instructions component ────────────────────────────────────────────────
-function DnsInstructions({ domain }: { domain: string }) {
+function DnsInstructions({
+  domain,
+  verifyToken,
+  verifyHost,
+}: {
+  domain: string;
+  verifyToken: string;
+  verifyHost: string;
+}) {
   const [open, setOpen] = useState(false);
   const hostLabel = domain.split('.').length > 2 ? domain.split('.').slice(0, -2).join('.') : '@';
-  const verifyHost = `_mdl-verify${hostLabel === '@' ? '' : '.' + hostLabel}`;
-  const verifyToken = `mdl-verify=${domain.replace(/[^a-z0-9]/gi, '').slice(0, 24).padEnd(24, 'x')}`;
   return (
     <div className="mt-3">
       <button
@@ -300,15 +306,24 @@ export default function Settings() {
   const [domainWsId, setDomainWsId] = useState(activeWorkspaceId);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
-  const handleAddDomain = () => {
+  const [domainError, setDomainError] = useState('');
+  const handleAddDomain = async () => {
     if (!domainInput.trim()) return;
-    addDomain(domainInput, domainWsId);
-    setDomainInput('');
+    setDomainError('');
+    try {
+      await addDomain(domainInput, domainWsId);
+      setDomainInput('');
+    } catch (e) {
+      setDomainError(e instanceof Error ? e.message : 'Failed to add domain');
+    }
   };
 
+  const [verifyError, setVerifyError] = useState<string | null>(null);
   const handleVerify = async (id: string) => {
     setVerifyingId(id);
-    await verifyDomain(id);
+    setVerifyError(null);
+    const ok = await verifyDomain(id);
+    if (!ok) setVerifyError(id);
     setVerifyingId(null);
   };
 
@@ -770,6 +785,9 @@ export default function Settings() {
                 Add Domain
               </button>
             </div>
+            {domainError && (
+              <p className="text-sm text-red-500 dark:text-red-400">{domainError}</p>
+            )}
           </div>
 
           {/* Default domain */}
@@ -813,9 +831,9 @@ export default function Settings() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {!isDefault && (
+                        {!isDefault && d.verified && (
                           <button
-                            onClick={() => setDefaultDomain(d.id, d.workspaceId)}
+                            onClick={() => setDefaultDomain(d.id)}
                             className="btn btn-secondary btn-sm"
                           >
                             Set as default
@@ -847,7 +865,18 @@ export default function Settings() {
                         </button>
                       </div>
                     </div>
-                    {!d.verified && <DnsInstructions domain={d.domain} />}
+                    {!d.verified && (
+                      <DnsInstructions
+                        domain={d.domain}
+                        verifyToken={d.verifyToken ?? ''}
+                        verifyHost={d.verifyHost ?? `_mdl-verify.${d.domain}`}
+                      />
+                    )}
+                    {verifyError === d.id && (
+                      <div className="px-4 pb-3 text-xs text-red-500 dark:text-red-400">
+                        Couldn't find the TXT record yet. DNS changes can take a few minutes.
+                      </div>
+                    )}
                   </div>
                 );
               })}

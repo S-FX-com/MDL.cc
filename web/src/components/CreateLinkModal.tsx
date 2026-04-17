@@ -33,9 +33,10 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
   const [quickMode, setQuickMode] = useState<QuickMode | null>(null);
   const { ref: qrRef, download: downloadQR } = useQRDownload('mdl-cc-qr.svg');
 
-  // Domains available for the active workspace
+  // Domains available for the active workspace (only verified — unverified ones
+  // can't serve redirects yet, so they'd create dead links).
   const workspaceDomains = useMemo(
-    () => customDomains.filter(d => d.workspaceId === activeWorkspaceId),
+    () => customDomains.filter(d => d.workspaceId === activeWorkspaceId && d.verified),
     [customDomains, activeWorkspaceId]
   );
   const defaultDomain = getDefaultDomain(activeWorkspaceId);
@@ -87,13 +88,9 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
       const response = await links.create(payload);
 
       if (response.success && response.data) {
-        // If a custom domain is selected, build the short_url using it
-        const selectedDomain = workspaceDomains.find(d => d.id === selectedDomainId);
-        const linkData = selectedDomain
-          ? { ...response.data, short_url: `https://${selectedDomain.domain}/${response.data.short_code}` }
-          : response.data;
-        setCreatedLink(linkData);
-        onSuccess?.(linkData);
+        // The API returns a pre-built short_url (branded host or mdl.cc/m{code}).
+        setCreatedLink(response.data);
+        onSuccess?.(response.data);
       } else {
         setError(response.error || 'Failed to create link');
       }
@@ -116,7 +113,7 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
 
   // ── Success screen ──────────────────────────────────────────────────────────
   if (createdLink) {
-    const shortUrl = createdLink.short_url?.replace('https://', '') ?? `mdl.cc/m/${createdLink.short_code}`;
+    const shortUrl = createdLink.short_url?.replace('https://', '') ?? `mdl.cc/m${createdLink.short_code}`;
     return (
       <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
         <div className="modal-content max-w-lg">
@@ -162,7 +159,7 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
             {/* QR Code preview */}
             <div className="p-4 bg-dark-50 dark:bg-dark-800 rounded-xl flex items-center gap-4">
               <div ref={qrRef} className="w-20 h-20 rounded-lg bg-white flex items-center justify-center p-1 shrink-0">
-                <QRCodeDisplay value={`https://mdl.cc/m/${createdLink.short_code}`} size={72} />
+                <QRCodeDisplay value={createdLink.short_url ?? `https://mdl.cc/m${createdLink.short_code}`} size={72} />
               </div>
               <div className="flex-1">
                 <p className="font-medium text-dark-900 dark:text-white">QR Code</p>
@@ -223,7 +220,7 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
           <div className="p-4 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-xl mb-4">
             <p className="text-xs text-dark-500 dark:text-dark-400 mb-1">SHORT LINK (auto-generated):</p>
             <p className="text-lg font-mono font-semibold text-primary-600 dark:text-primary-400">
-              {defaultDomain ? defaultDomain.domain : 'mdl.cc'}/<span className="opacity-60">••••••</span>
+              {defaultDomain ? `${defaultDomain.domain}/` : 'mdl.cc/m'}<span className="opacity-60">••••••</span>
             </p>
             <p className="text-xs text-dark-400 dark:text-dark-500 mt-1">
               A unique code will be assigned automatically
@@ -313,13 +310,13 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
                   onChange={(e) => setSelectedDomainId(e.target.value)}
                   className="input w-auto text-sm text-dark-600 dark:text-dark-300 pr-6"
                 >
-                  <option value="">mdl.cc/</option>
+                  <option value="">mdl.cc/m</option>
                   {workspaceDomains.map(d => (
                     <option key={d.id} value={d.id}>{d.domain}/</option>
                   ))}
                 </select>
               ) : (
-                <span className="text-dark-400 dark:text-dark-500 text-sm">mdl.cc/</span>
+                <span className="text-dark-400 dark:text-dark-500 text-sm">mdl.cc/m</span>
               )}
               <input
                 type="text"

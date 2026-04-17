@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Link2, MousePointerClick, TrendingUp, ArrowUpRight, ExternalLink } from 'lucide-react';
-import { stats, DashboardStats } from '../lib/api';
+import { stats, DashboardStats, shortLinkDisplay } from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../contexts/ThemeContext';
@@ -191,7 +191,7 @@ export default function Dashboard() {
                       {link.title || link.short_code}
                     </p>
                     <p className="text-xs truncate mt-0.5" style={{ color: '#1456f0' }}>
-                      mdl.cc/m/{link.short_code}
+                      {shortLinkDisplay(link)}
                     </p>
                   </div>
                   <div className="flex items-center gap-3 ml-4 shrink-0">
@@ -258,7 +258,7 @@ export default function Dashboard() {
                           className="text-sm font-medium"
                           style={{ color: dark ? '#60a5fa' : '#1456f0' }}
                         >
-                          mdl.cc/m/{link.short_code}
+                          {shortLinkDisplay(link)}
                         </Link>
                       </div>
                     </td>

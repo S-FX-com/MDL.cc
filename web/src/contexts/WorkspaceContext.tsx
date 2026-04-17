@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import { domains as domainsApi, Domain as ApiDomain } from '../lib/api';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,21 @@ export interface CustomDomain {
   verified: boolean;
   addedAt: string;
   isDefault?: boolean;
+  verifyToken?: string | null;
+  verifyHost?: string;
+}
+
+function toCustomDomain(d: ApiDomain): CustomDomain {
+  return {
+    id: d.id,
+    domain: d.domain,
+    workspaceId: d.workspace_id,
+    verified: d.verified,
+    addedAt: d.created_at,
+    isDefault: d.is_default,
+    verifyToken: d.verify_token,
+    verifyHost: d.verify_host,
+  };
 }
 
 interface WorkspaceContextType {
@@ -49,11 +65,12 @@ interface WorkspaceContextType {
   inviteMemberByEmail: (email: string, workspaceIds: string[], role?: 'member' | 'admin') => Promise<void>;
   assignMemberWorkspace: (memberId: string, workspaceId: string, assign: boolean) => void;
   removeMember: (memberId: string) => void;
-  addDomain: (domain: string, workspaceId: string) => void;
+  addDomain: (domain: string, workspaceId: string) => Promise<CustomDomain>;
   verifyDomain: (id: string) => Promise<boolean>;
-  removeDomain: (id: string) => void;
-  setDefaultDomain: (domainId: string, workspaceId: string) => void;
+  removeDomain: (id: string) => Promise<void>;
+  setDefaultDomain: (domainId: string) => Promise<void>;
   getDefaultDomain: (workspaceId: string) => CustomDomain | undefined;
+  reloadDomains: () => Promise<void>;
   regenerateInviteCode: () => string;
   associateLinkWithWorkspace: (linkId: string, workspaceId: string) => void;
   reloadWorkspaces: () => Promise<void>;
@@ -65,11 +82,13 @@ const S = {
   activeWsId:       'mdl-active-workspace',
   hasAgency:        'mdl-has-agency',
   teamMembers:      'mdl-team-members',
-  customDomains:    'mdl-custom-domains',
   inviteCode:       'mdl-invite-code',
   linkWorkspaces:   'mdl-link-workspaces',
-  defaultDomainIds: 'mdl-default-domain-ids',
 };
+
+// Stale keys from earlier versions that kept domains + default-ids client-side.
+// We clear them on mount so old data can't shadow API-sourced state.
+const LEGACY_KEYS = ['mdl-custom-domains', 'mdl-default-domain-ids'];
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -113,8 +132,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [activeWsId, setActiveWsId]       = useState(() => load<string>(S.activeWsId, ''));
   const [hasAgency, setHasAgency]         = useState(() => load<boolean>(S.hasAgency, false));
   const [teamMembers, setTeamMembers]     = useState<TeamMember[]>(() => load(S.teamMembers, []));
-  const [customDomains, setCustomDomains] = useState<CustomDomain[]>(() => load(S.customDomains, []));
-  const [defaultDomainIds, setDefaultDomainIds] = useState<Record<string, string>>(() => load(S.defaultDomainIds, {}));
+  const [customDomains, setCustomDomains] = useState<CustomDomain[]>([]);
   const [linkWorkspaces, setLinkWorkspaces] = useState<Record<string, string>>(() => load(S.linkWorkspaces, {}));
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(true);
   const [inviteCode] = useState<string>(() => {
@@ -177,8 +195,24 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // ── Domains (server-authoritative) ──────────────────────────────────────
+
+  const reloadDomains = useCallback(async () => {
+    if (!localStorage.getItem('mdl-auth-token')) {
+      setCustomDomains([]);
+      return;
+    }
+    const res = await domainsApi.list();
+    if (res.success && res.data) {
+      setCustomDomains(res.data.map(toCustomDomain));
+    }
+  }, []);
+
   useEffect(() => {
+    // One-time cleanup: purge localStorage domain state that predates the API.
+    LEGACY_KEYS.forEach(k => localStorage.removeItem(k));
     reloadWorkspaces();
+    reloadDomains();
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setActiveWorkspaceId = useCallback((id: string) => {
@@ -269,69 +303,37 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     save(S.teamMembers, updated);
   }, [teamMembers]);
 
-  const addDomain = useCallback((domain: string, workspaceId: string) => {
-    const d: CustomDomain = {
-      id: crypto.randomUUID(),
-      domain: domain.trim().toLowerCase().replace(/^https?:\/\//, ''),
-      workspaceId,
-      verified: false,
-      addedAt: new Date().toISOString(),
-    };
-    const updated = [...customDomains, d];
-    setCustomDomains(updated);
-    save(S.customDomains, updated);
-    // Auto-set as default for the workspace if no default exists yet
-    setDefaultDomainIds(prev => {
-      if (prev[workspaceId]) return prev;
-      const next = { ...prev, [workspaceId]: d.id };
-      save(S.defaultDomainIds, next);
-      return next;
-    });
-  }, [customDomains]);
+  const addDomain = useCallback(async (domain: string, workspaceId: string): Promise<CustomDomain> => {
+    const res = await domainsApi.create({ domain, workspace_id: workspaceId });
+    if (!res.success || !res.data) throw new Error(res.error || 'Failed to add domain');
+    const added = toCustomDomain(res.data);
+    // The server auto-promotes the first domain to is_default, so a reload keeps state in sync.
+    await reloadDomains();
+    return added;
+  }, [reloadDomains]);
 
-  const setDefaultDomain = useCallback((domainId: string, workspaceId: string) => {
-    setDefaultDomainIds(prev => {
-      const next = { ...prev, [workspaceId]: domainId };
-      save(S.defaultDomainIds, next);
-      return next;
-    });
-  }, []);
+  const setDefaultDomain = useCallback(async (domainId: string) => {
+    const res = await domainsApi.setDefault(domainId);
+    if (res.success) await reloadDomains();
+  }, [reloadDomains]);
 
   const getDefaultDomain = useCallback((workspaceId: string): CustomDomain | undefined => {
-    const domainId = defaultDomainIds[workspaceId];
-    if (!domainId) return undefined;
-    return customDomains.find(d => d.id === domainId && d.workspaceId === workspaceId);
-  }, [customDomains, defaultDomainIds]);
+    return customDomains.find(d => d.workspaceId === workspaceId && d.isDefault && d.verified);
+  }, [customDomains]);
 
   const verifyDomain = useCallback(async (id: string): Promise<boolean> => {
-    await new Promise(r => setTimeout(r, 1800));
-    const updated = customDomains.map(d => d.id === id ? { ...d, verified: true } : d);
-    setCustomDomains(updated);
-    save(S.customDomains, updated);
-    return true;
-  }, [customDomains]);
-
-  const removeDomain = useCallback((id: string) => {
-    const removed = customDomains.find(d => d.id === id);
-    const updated = customDomains.filter(d => d.id !== id);
-    setCustomDomains(updated);
-    save(S.customDomains, updated);
-    // If removed domain was the default, promote the next domain for the workspace or clear
-    if (removed) {
-      setDefaultDomainIds(prev => {
-        if (prev[removed.workspaceId] !== id) return prev;
-        const next = updated.find(d => d.workspaceId === removed.workspaceId);
-        const newMap = { ...prev };
-        if (next) {
-          newMap[removed.workspaceId] = next.id;
-        } else {
-          delete newMap[removed.workspaceId];
-        }
-        save(S.defaultDomainIds, newMap);
-        return newMap;
-      });
+    const res = await domainsApi.verify(id);
+    if (res.success && res.data) {
+      await reloadDomains();
+      return true;
     }
-  }, [customDomains]);
+    return false;
+  }, [reloadDomains]);
+
+  const removeDomain = useCallback(async (id: string) => {
+    const res = await domainsApi.delete(id);
+    if (res.success) await reloadDomains();
+  }, [reloadDomains]);
 
   const associateLinkWithWorkspace = useCallback((linkId: string, workspaceId: string) => {
     setLinkWorkspaces(prev => {
@@ -376,6 +378,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       regenerateInviteCode,
       associateLinkWithWorkspace,
       reloadWorkspaces,
+      reloadDomains,
     }}>
       {children}
     </WorkspaceContext.Provider>

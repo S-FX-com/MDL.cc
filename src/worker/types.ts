@@ -91,10 +91,13 @@ export interface User {
 
 export interface Domain {
   id: string;
-  user_id: string;
+  workspace_id: string;
   domain: string;
   verified: number;
+  is_default: number;
+  verify_token: string | null;
   created_at: string;
+  verified_at: string | null;
 }
 
 export interface Tag {

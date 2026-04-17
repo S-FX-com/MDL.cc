@@ -14,7 +14,7 @@ import {
   Check,
   Link2,
 } from 'lucide-react';
-import { links, Link as LinkType, LinksResponse, groups as groupsApi, LinkGroup } from '../lib/api';
+import { links, Link as LinkType, LinksResponse, groups as groupsApi, LinkGroup, shortLinkHref, shortLinkDisplay } from '../lib/api';
 import { format, parseISO } from 'date-fns';
 import CreateLinkModal from '../components/CreateLinkModal';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -89,7 +89,7 @@ export default function Links() {
   };
 
   const copyLink = async (link: LinkType) => {
-    await navigator.clipboard.writeText(`https://mdl.cc/m/${link.short_code}`);
+    await navigator.clipboard.writeText(shortLinkHref(link));
     setCopiedId(link.id);
     setTimeout(() => setCopiedId(null), 2000);
   };
@@ -193,7 +193,7 @@ export default function Links() {
                             to={`/links/${link.id}`}
                             className="font-medium text-primary-500 hover:text-primary-600"
                           >
-                            mdl.cc/m/{link.short_code}
+                            {shortLinkDisplay(link)}
                           </Link>
                           <button
                             onClick={() => copyLink(link)}
@@ -207,7 +207,7 @@ export default function Links() {
                             )}
                           </button>
                           <a
-                            href={`https://mdl.cc/m/${link.short_code}`}
+                            href={shortLinkHref(link)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-1 rounded hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
