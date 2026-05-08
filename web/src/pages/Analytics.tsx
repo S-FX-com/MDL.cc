@@ -46,7 +46,7 @@ export default function Analytics() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-secondary-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -55,8 +55,8 @@ export default function Analytics() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-dark-900 dark:text-white">Analytics</h1>
-        <p className="text-dark-500 dark:text-dark-400 mt-1">
+        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Analytics</h1>
+        <p className="text-neutral-500 dark:text-neutral-400 mt-1">
           Track performance across all your links
         </p>
       </div>
@@ -65,12 +65,12 @@ export default function Analytics() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="stat-card">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-              <MousePointerClick className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+            <div className="w-10 h-10 rounded-xl bg-secondary-100 dark:bg-secondary-900/30 flex items-center justify-center">
+              <MousePointerClick className="w-5 h-5 text-secondary-600 dark:text-secondary-400" />
             </div>
             <div>
-              <p className="text-sm text-dark-500 dark:text-dark-400">Total Clicks</p>
-              <p className="text-2xl font-bold text-dark-900 dark:text-white">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">Total Clicks</p>
+              <p className="text-2xl font-bold text-neutral-900 dark:text-white">
                 {data?.total_clicks.toLocaleString() || 0}
               </p>
             </div>
@@ -83,8 +83,8 @@ export default function Analytics() {
               <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="text-sm text-dark-500 dark:text-dark-400">Today</p>
-              <p className="text-2xl font-bold text-dark-900 dark:text-white">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">Today</p>
+              <p className="text-2xl font-bold text-neutral-900 dark:text-white">
                 {data?.today_clicks.toLocaleString() || 0}
               </p>
             </div>
@@ -97,8 +97,8 @@ export default function Analytics() {
               <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="text-sm text-dark-500 dark:text-dark-400">Active Links</p>
-              <p className="text-2xl font-bold text-dark-900 dark:text-white">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">Active Links</p>
+              <p className="text-2xl font-bold text-neutral-900 dark:text-white">
                 {data?.total_links.toLocaleString() || 0}
               </p>
             </div>
@@ -111,8 +111,8 @@ export default function Analytics() {
               <Globe className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <p className="text-sm text-dark-500 dark:text-dark-400">Avg/Link</p>
-              <p className="text-2xl font-bold text-dark-900 dark:text-white">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">Avg/Link</p>
+              <p className="text-2xl font-bold text-neutral-900 dark:text-white">
                 {data?.total_links ? Math.round(data.total_clicks / data.total_links) : 0}
               </p>
             </div>
@@ -124,8 +124,8 @@ export default function Analytics() {
       <div className="card p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="font-semibold text-dark-900 dark:text-white">Click Activity</h2>
-            <p className="text-sm text-dark-500 dark:text-dark-400 mt-1">Last 7 days</p>
+            <h2 className="font-semibold text-neutral-900 dark:text-white">Click Activity</h2>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Last 7 days</p>
           </div>
         </div>
         <div className="h-80">
@@ -154,10 +154,10 @@ export default function Analytics() {
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1e293b',
+                  backgroundColor: '#1e2f47',
                   border: 'none',
                   borderRadius: '8px',
-                  color: '#f8fafc',
+                  color: '#f8f9fa',
                 }}
                 labelFormatter={(date) => format(parseISO(date as string), 'EEEE, MMM d')}
                 formatter={(value: number) => [value.toLocaleString(), 'Clicks']}
@@ -178,40 +178,40 @@ export default function Analytics() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Most Clicked */}
         <div className="card">
-          <div className="flex items-center justify-between p-4 border-b border-dark-100 dark:border-dark-700">
-            <h3 className="font-semibold text-dark-900 dark:text-white">Top Performing Links</h3>
-            <Link to="/links" className="text-sm text-primary-500 hover:text-primary-600 flex items-center gap-1">
+          <div className="flex items-center justify-between p-4 border-b border-neutral-100 dark:border-neutral-700">
+            <h3 className="font-semibold text-neutral-900 dark:text-white">Top Performing Links</h3>
+            <Link to="/links" className="text-sm text-secondary-500 hover:text-secondary-600 flex items-center gap-1">
               View all <ArrowUpRight className="w-4 h-4" />
             </Link>
           </div>
-          <div className="divide-y divide-dark-100 dark:divide-dark-700">
+          <div className="divide-y divide-neutral-100 dark:divide-neutral-700">
             {data?.top_links && data.top_links.length > 0 ? (
               data.top_links.map((link, index) => (
                 <Link
                   key={link.id}
                   to={`/links/${link.id}`}
-                  className="flex items-center justify-between p-4 hover:bg-dark-50 dark:hover:bg-dark-800/50 transition-colors"
+                  className="flex items-center justify-between p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-6 h-6 rounded-full bg-dark-100 dark:bg-dark-700 flex items-center justify-center text-sm font-medium text-dark-600 dark:text-dark-400">
+                    <span className="w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-700 flex items-center justify-center text-sm font-medium text-neutral-600 dark:text-neutral-400">
                       {index + 1}
                     </span>
                     <div className="min-w-0">
-                      <p className="font-medium text-primary-500 truncate">
+                      <p className="font-medium text-secondary-500 truncate">
                         {shortLinkDisplay(link)}
                       </p>
-                      <p className="text-sm text-dark-500 dark:text-dark-400 truncate">
+                      <p className="text-sm text-neutral-500 dark:text-neutral-400 truncate">
                         {link.title || link.original_url}
                       </p>
                     </div>
                   </div>
-                  <span className="font-bold text-dark-900 dark:text-white ml-4">
+                  <span className="font-bold text-neutral-900 dark:text-white ml-4">
                     {link.click_count?.toLocaleString() || 0}
                   </span>
                 </Link>
               ))
             ) : (
-              <div className="p-8 text-center text-dark-400 dark:text-dark-500">
+              <div className="p-8 text-center text-neutral-400 dark:text-neutral-500">
                 No link data yet
               </div>
             )}
@@ -220,32 +220,32 @@ export default function Analytics() {
 
         {/* Recent Links */}
         <div className="card">
-          <div className="flex items-center justify-between p-4 border-b border-dark-100 dark:border-dark-700">
-            <h3 className="font-semibold text-dark-900 dark:text-white">Recently Created</h3>
+          <div className="flex items-center justify-between p-4 border-b border-neutral-100 dark:border-neutral-700">
+            <h3 className="font-semibold text-neutral-900 dark:text-white">Recently Created</h3>
           </div>
-          <div className="divide-y divide-dark-100 dark:divide-dark-700">
+          <div className="divide-y divide-neutral-100 dark:divide-neutral-700">
             {data?.recent_links && data.recent_links.length > 0 ? (
               data.recent_links.map((link) => (
                 <Link
                   key={link.id}
                   to={`/links/${link.id}`}
-                  className="flex items-center justify-between p-4 hover:bg-dark-50 dark:hover:bg-dark-800/50 transition-colors"
+                  className="flex items-center justify-between p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
                 >
                   <div className="min-w-0">
-                    <p className="font-medium text-primary-500 truncate">
+                    <p className="font-medium text-secondary-500 truncate">
                       {shortLinkDisplay(link)}
                     </p>
-                    <p className="text-sm text-dark-500 dark:text-dark-400 truncate">
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400 truncate">
                       {link.title || link.original_url}
                     </p>
                   </div>
-                  <span className="text-sm text-dark-400 ml-4">
+                  <span className="text-sm text-neutral-400 ml-4">
                     {format(parseISO(link.created_at), 'MMM d')}
                   </span>
                 </Link>
               ))
             ) : (
-              <div className="p-8 text-center text-dark-400 dark:text-dark-500">
+              <div className="p-8 text-center text-neutral-400 dark:text-neutral-500">
                 No links yet
               </div>
             )}
@@ -254,19 +254,19 @@ export default function Analytics() {
       </div>
 
       {/* Info Banner */}
-      <div className="card p-6 bg-gradient-to-r from-primary-500/10 to-blue-500/10 border-primary-200 dark:border-primary-800">
+      <div className="card p-6 bg-gradient-to-r from-secondary-500/10 to-blue-500/10 border-secondary-200 dark:border-secondary-800">
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-primary-500 flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-secondary-500 flex items-center justify-center flex-shrink-0">
             <Monitor className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="font-semibold text-dark-900 dark:text-white">
+            <h3 className="font-semibold text-neutral-900 dark:text-white">
               Detailed Analytics Per Link
             </h3>
-            <p className="text-dark-600 dark:text-dark-300 mt-1">
+            <p className="text-neutral-600 dark:text-neutral-300 mt-1">
               Click on any link to see detailed analytics including geographic data, device breakdowns, referrer sources, and click trends over time.
             </p>
-            <p className="text-sm text-dark-500 dark:text-dark-400 mt-2">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2">
               MDL.cc - The middle-point between you and your audience.
             </p>
           </div>

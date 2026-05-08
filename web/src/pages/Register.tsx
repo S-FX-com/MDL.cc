@@ -39,35 +39,41 @@ export default function Register() {
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: isDark ? '#0f172a' : '#f8fafc' }}
+      style={{ background: isDark ? '#010619' : '#f8f9fa' }}
     >
       <div
         className="w-full max-w-sm rounded-2xl p-8 shadow-xl"
         style={{
-          background: isDark ? '#1e293b' : '#ffffff',
-          border: isDark ? '1px solid #2d3748' : '1px solid #e5e7eb',
+          background: isDark ? '#1e2f47' : '#ffffff',
+          border: isDark ? '1px solid #1e2f47' : '1px solid #e5e7eb',
         }}
       >
         {/* Logo */}
         <div className="flex items-center gap-2.5 mb-8 justify-center">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#1456f0' }}>
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center ring-accent"
+            style={{ background: 'linear-gradient(135deg, #0c1830 0%, #1c45cf 100%)' }}
+          >
             <Link2 className="w-5 h-5 text-white" />
           </div>
           <span
-            className="font-display font-semibold text-2xl"
-            style={{ color: isDark ? '#f0f0f0' : '#181e25' }}
+            className="font-display font-semibold text-2xl tracking-tight"
+            style={{ color: isDark ? '#f0f2f5' : '#0c1830' }}
           >
-            MDL<span style={{ color: '#1456f0' }}>.cc</span>
+            MDL<span style={{ color: '#00c7f9' }}>.cc</span>
           </span>
         </div>
 
         {workspaceName && (
-          <div className="flex items-center gap-2 mb-5 px-3 py-2 rounded-xl" style={{ background: isDark ? '#0f172a' : '#f0f4ff' }}>
-            <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ background: '#1456f0' }}>
+          <div className="flex items-center gap-2 mb-5 px-3 py-2 rounded-xl" style={{ background: isDark ? '#010619' : '#eef3ff' }}>
+            <div
+              className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+              style={{ background: 'linear-gradient(135deg, #5b8ffe 0%, #00c7f9 100%)' }}
+            >
               <span className="text-white font-bold text-xs">{workspaceName[0].toUpperCase()}</span>
             </div>
-            <p className="text-xs font-semibold flex-1 truncate" style={{ color: isDark ? '#f0f0f0' : '#181e25' }}>
-              Joining <span style={{ color: '#1456f0' }}>{workspaceName}</span>
+            <p className="text-xs font-semibold flex-1 truncate" style={{ color: isDark ? '#f0f2f5' : '#0c1830' }}>
+              Joining <span style={{ color: '#5b8ffe' }}>{workspaceName}</span>
             </p>
             <button onClick={() => navigate('/workspace')} className="shrink-0" style={{ color: '#8e8e93' }}>
               <ArrowLeft className="w-3.5 h-3.5" />
@@ -76,7 +82,7 @@ export default function Register() {
         )}
         <h1
           className="text-xl font-semibold mb-1 text-center"
-          style={{ color: isDark ? '#f8fafc' : '#181e25' }}
+          style={{ color: isDark ? '#f8f9fa' : '#0c1830' }}
         >
           Create account
         </h1>
@@ -87,7 +93,7 @@ export default function Register() {
         {error && (
           <div
             className="mb-4 px-4 py-3 rounded-xl text-sm"
-            style={{ background: '#fee2e2', color: '#dc2626' }}
+            style={{ background: '#fde8eb', color: '#dc3545' }}
           >
             {error}
           </div>
@@ -97,7 +103,7 @@ export default function Register() {
           <div>
             <label
               className="block text-xs font-medium mb-1.5"
-              style={{ color: isDark ? '#94a3b8' : '#6b7280' }}
+              style={{ color: isDark ? '#9ca3af' : '#6b7280' }}
             >
               Full name
             </label>
@@ -109,9 +115,9 @@ export default function Register() {
               required
               className="input w-full"
               style={{
-                background: isDark ? '#0f172a' : '#f8fafc',
-                border: isDark ? '1.5px solid #334155' : '1.5px solid #e5e7eb',
-                color: isDark ? '#f0f0f0' : '#181e25',
+                background: isDark ? '#010619' : '#f8f9fa',
+                border: isDark ? '1.5px solid #1e2f47' : '1.5px solid #e5e7eb',
+                color: isDark ? '#f0f2f5' : '#0c1830',
               }}
             />
           </div>
@@ -119,7 +125,7 @@ export default function Register() {
           <div>
             <label
               className="block text-xs font-medium mb-1.5"
-              style={{ color: isDark ? '#94a3b8' : '#6b7280' }}
+              style={{ color: isDark ? '#9ca3af' : '#6b7280' }}
             >
               Email address
             </label>
@@ -131,9 +137,9 @@ export default function Register() {
               required
               className="input w-full"
               style={{
-                background: isDark ? '#0f172a' : '#f8fafc',
-                border: isDark ? '1.5px solid #334155' : '1.5px solid #e5e7eb',
-                color: isDark ? '#f0f0f0' : '#181e25',
+                background: isDark ? '#010619' : '#f8f9fa',
+                border: isDark ? '1.5px solid #1e2f47' : '1.5px solid #e5e7eb',
+                color: isDark ? '#f0f2f5' : '#0c1830',
               }}
             />
           </div>
@@ -141,7 +147,7 @@ export default function Register() {
           <div>
             <label
               className="block text-xs font-medium mb-1.5"
-              style={{ color: isDark ? '#94a3b8' : '#6b7280' }}
+              style={{ color: isDark ? '#9ca3af' : '#6b7280' }}
             >
               Password
             </label>
@@ -155,9 +161,9 @@ export default function Register() {
                 minLength={6}
                 className="input w-full pr-10"
                 style={{
-                  background: isDark ? '#0f172a' : '#f8fafc',
-                  border: isDark ? '1.5px solid #334155' : '1.5px solid #e5e7eb',
-                  color: isDark ? '#f0f0f0' : '#181e25',
+                  background: isDark ? '#010619' : '#f8f9fa',
+                  border: isDark ? '1.5px solid #1e2f47' : '1.5px solid #e5e7eb',
+                  color: isDark ? '#f0f2f5' : '#0c1830',
                 }}
               />
               <button
@@ -174,8 +180,8 @@ export default function Register() {
           <button
             type="submit"
             disabled={loading}
-            className="btn btn-primary w-full"
-            style={{ background: '#1456f0', marginTop: '8px' }}
+            className="btn btn-primary btn-lg w-full"
+            style={{ marginTop: '8px' }}
           >
             {loading ? 'Creating account…' : 'Create account'}
           </button>
@@ -183,7 +189,7 @@ export default function Register() {
 
         <p className="text-sm text-center mt-6" style={{ color: '#8e8e93' }}>
           Already have an account?{' '}
-          <Link to="/login" style={{ color: '#1456f0', fontWeight: 600 }}>
+          <Link to="/login" style={{ color: '#5b8ffe', fontWeight: 600 }}>
             Sign in
           </Link>
         </p>

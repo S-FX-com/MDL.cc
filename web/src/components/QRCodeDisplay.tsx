@@ -7,7 +7,9 @@ interface QRCodeDisplayProps {
 }
 
 export default function QRCodeDisplay({ value, size = 200 }: QRCodeDisplayProps) {
-  return <QRCode value={value} size={size} bgColor="#ffffff" fgColor="#000000" />;
+  // QR foreground in brand primary navy for visual cohesion. White background
+  // keeps contrast at the level scanners expect.
+  return <QRCode value={value} size={size} bgColor="#ffffff" fgColor="#0c1830" />;
 }
 
 /** Downloads the QR code as an SVG file. Pass the ref of the wrapping <div>. */

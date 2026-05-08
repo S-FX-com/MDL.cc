@@ -32,7 +32,7 @@ import {
   Bar,
 } from 'recharts';
 
-const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+const COLORS = ['#10b981', '#5b8ffe', '#f59e0b', '#dc3545', '#8b5cf6', '#ec4899'];
 
 export default function LinkDetail() {
   const { id } = useParams<{ id: string }>();
@@ -104,7 +104,7 @@ export default function LinkDetail() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-secondary-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -112,8 +112,8 @@ export default function LinkDetail() {
   if (!link) {
     return (
       <div className="text-center py-16">
-        <h2 className="text-xl font-semibold text-dark-900 dark:text-white mb-2">Link not found</h2>
-        <RouterLink to="/links" className="text-primary-500 hover:text-primary-600">
+        <h2 className="text-xl font-semibold text-neutral-900 dark:text-white mb-2">Link not found</h2>
+        <RouterLink to="/links" className="text-secondary-500 hover:text-secondary-600">
           Back to links
         </RouterLink>
       </div>
@@ -127,7 +127,7 @@ export default function LinkDetail() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 rounded-lg hover:bg-dark-100 dark:hover:bg-dark-800 transition-colors"
+            className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -141,29 +141,29 @@ export default function LinkDetail() {
                 className="input text-xl font-bold"
               />
             ) : (
-              <h1 className="text-2xl font-bold text-dark-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
                 {link.title || link.short_code}
               </h1>
             )}
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-primary-500 font-medium">{shortLinkDisplay(link)}</span>
+              <span className="text-secondary-500 font-medium">{shortLinkDisplay(link)}</span>
               <button
                 onClick={copyLink}
-                className="p-1 rounded hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
+                className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
               >
                 {copied ? (
                   <Check className="w-4 h-4 text-green-500" />
                 ) : (
-                  <Copy className="w-4 h-4 text-dark-400" />
+                  <Copy className="w-4 h-4 text-neutral-400" />
                 )}
               </button>
               <a
                 href={shortLinkHref(link)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-1 rounded hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
+                className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
               >
-                <ExternalLink className="w-4 h-4 text-dark-400" />
+                <ExternalLink className="w-4 h-4 text-neutral-400" />
               </a>
             </div>
           </div>
@@ -199,7 +199,7 @@ export default function LinkDetail() {
         <div className="lg:col-span-2 space-y-6">
           {/* Destination URL */}
           <div className="card p-6">
-            <h3 className="font-semibold text-dark-900 dark:text-white mb-3">Destination URL</h3>
+            <h3 className="font-semibold text-neutral-900 dark:text-white mb-3">Destination URL</h3>
             {editMode ? (
               <input
                 type="url"
@@ -212,7 +212,7 @@ export default function LinkDetail() {
                 href={link.original_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-dark-600 dark:text-dark-300 hover:text-primary-500 break-all"
+                className="text-neutral-600 dark:text-neutral-300 hover:text-secondary-500 break-all"
               >
                 {link.original_url}
               </a>
@@ -223,15 +223,15 @@ export default function LinkDetail() {
           <div className="grid grid-cols-2 gap-4">
             <div className="stat-card">
               <div className="flex items-center gap-2">
-                <MousePointerClick className="w-5 h-5 text-primary-500" />
-                <span className="text-sm text-dark-500 dark:text-dark-400">Total Clicks</span>
+                <MousePointerClick className="w-5 h-5 text-secondary-500" />
+                <span className="text-sm text-neutral-500 dark:text-neutral-400">Total Clicks</span>
               </div>
               <div className="stat-value mt-2">{analytics?.total_clicks.toLocaleString() || 0}</div>
             </div>
             <div className="stat-card">
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-blue-500" />
-                <span className="text-sm text-dark-500 dark:text-dark-400">Unique Visitors</span>
+                <span className="text-sm text-neutral-500 dark:text-neutral-400">Unique Visitors</span>
               </div>
               <div className="stat-value mt-2">{analytics?.unique_visitors.toLocaleString() || 0}</div>
             </div>
@@ -239,7 +239,7 @@ export default function LinkDetail() {
 
           {/* Clicks Over Time */}
           <div className="card p-6">
-            <h3 className="font-semibold text-dark-900 dark:text-white mb-4">Clicks Over Time</h3>
+            <h3 className="font-semibold text-neutral-900 dark:text-white mb-4">Clicks Over Time</h3>
             <div className="h-64">
               {analytics?.clicks_by_date && analytics.clicks_by_date.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
@@ -253,10 +253,10 @@ export default function LinkDetail() {
                     <YAxis stroke="#64748b" fontSize={12} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#1e293b',
+                        backgroundColor: '#1e2f47',
                         border: 'none',
                         borderRadius: '8px',
-                        color: '#f8fafc',
+                        color: '#f8f9fa',
                       }}
                       labelFormatter={(date) => format(parseISO(date as string), 'MMM d, yyyy')}
                     />
@@ -270,7 +270,7 @@ export default function LinkDetail() {
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-full text-dark-400">
+                <div className="flex items-center justify-center h-full text-neutral-400">
                   No click data yet
                 </div>
               )}
@@ -281,8 +281,8 @@ export default function LinkDetail() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Device Types */}
             <div className="card p-6">
-              <h3 className="font-semibold text-dark-900 dark:text-white mb-4 flex items-center gap-2">
-                <Monitor className="w-5 h-5 text-dark-400" />
+              <h3 className="font-semibold text-neutral-900 dark:text-white mb-4 flex items-center gap-2">
+                <Monitor className="w-5 h-5 text-neutral-400" />
                 Devices
               </h3>
               <div className="h-48">
@@ -309,7 +309,7 @@ export default function LinkDetail() {
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="flex items-center justify-center h-full text-dark-400">
+                  <div className="flex items-center justify-center h-full text-neutral-400">
                     No data
                   </div>
                 )}
@@ -318,8 +318,8 @@ export default function LinkDetail() {
 
             {/* Browsers */}
             <div className="card p-6">
-              <h3 className="font-semibold text-dark-900 dark:text-white mb-4 flex items-center gap-2">
-                <Chrome className="w-5 h-5 text-dark-400" />
+              <h3 className="font-semibold text-neutral-900 dark:text-white mb-4 flex items-center gap-2">
+                <Chrome className="w-5 h-5 text-neutral-400" />
                 Browsers
               </h3>
               <div className="h-48">
@@ -336,17 +336,17 @@ export default function LinkDetail() {
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#1e293b',
+                          backgroundColor: '#1e2f47',
                           border: 'none',
                           borderRadius: '8px',
-                          color: '#f8fafc',
+                          color: '#f8f9fa',
                         }}
                       />
                       <Bar dataKey="count" fill="#10b981" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="flex items-center justify-center h-full text-dark-400">
+                  <div className="flex items-center justify-center h-full text-neutral-400">
                     No data
                   </div>
                 )}
@@ -356,26 +356,26 @@ export default function LinkDetail() {
 
           {/* Countries */}
           <div className="card p-6">
-            <h3 className="font-semibold text-dark-900 dark:text-white mb-4 flex items-center gap-2">
-              <Globe className="w-5 h-5 text-dark-400" />
+            <h3 className="font-semibold text-neutral-900 dark:text-white mb-4 flex items-center gap-2">
+              <Globe className="w-5 h-5 text-neutral-400" />
               Top Countries
             </h3>
             {analytics?.clicks_by_country && analytics.clicks_by_country.length > 0 ? (
               <div className="space-y-3">
                 {analytics.clicks_by_country.map((country, index) => (
                   <div key={country.country || 'unknown'} className="flex items-center gap-3">
-                    <span className="w-6 text-sm text-dark-400">{index + 1}</span>
-                    <span className="flex-1 font-medium text-dark-900 dark:text-white">
+                    <span className="w-6 text-sm text-neutral-400">{index + 1}</span>
+                    <span className="flex-1 font-medium text-neutral-900 dark:text-white">
                       {country.country || 'Unknown'}
                     </span>
-                    <span className="text-dark-500 dark:text-dark-400">
+                    <span className="text-neutral-500 dark:text-neutral-400">
                       {country.count.toLocaleString()} clicks
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-dark-400">No data yet</p>
+              <p className="text-neutral-400">No data yet</p>
             )}
           </div>
         </div>
@@ -384,8 +384,8 @@ export default function LinkDetail() {
         <div className="space-y-6">
           {/* QR Code */}
           <div className="card p-6">
-            <h3 className="font-semibold text-dark-900 dark:text-white mb-4 flex items-center gap-2">
-              <QrCode className="w-5 h-5 text-dark-400" />
+            <h3 className="font-semibold text-neutral-900 dark:text-white mb-4 flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-neutral-400" />
               QR Code
             </h3>
             <div ref={qrRef} className="bg-white p-4 rounded-lg flex items-center justify-center">
@@ -399,22 +399,22 @@ export default function LinkDetail() {
 
           {/* Link Info */}
           <div className="card p-6 space-y-4">
-            <h3 className="font-semibold text-dark-900 dark:text-white">Link Details</h3>
+            <h3 className="font-semibold text-neutral-900 dark:text-white">Link Details</h3>
             <div>
-              <p className="text-sm text-dark-500 dark:text-dark-400">Created</p>
-              <p className="text-dark-900 dark:text-white">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">Created</p>
+              <p className="text-neutral-900 dark:text-white">
                 {format(parseISO(link.created_at), 'MMM d, yyyy h:mm a')}
               </p>
             </div>
             <div>
-              <p className="text-sm text-dark-500 dark:text-dark-400">Last Updated</p>
-              <p className="text-dark-900 dark:text-white">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">Last Updated</p>
+              <p className="text-neutral-900 dark:text-white">
                 {format(parseISO(link.updated_at), 'MMM d, yyyy h:mm a')}
               </p>
             </div>
             {link.group_name && (
               <div>
-                <p className="text-sm text-dark-500 dark:text-dark-400">Group</p>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">Group</p>
                 <span
                   className="badge mt-1"
                   style={{
@@ -427,7 +427,7 @@ export default function LinkDetail() {
               </div>
             )}
             <div>
-              <p className="text-sm text-dark-500 dark:text-dark-400">Status</p>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">Status</p>
               <span
                 className={`badge mt-1 ${link.is_active ? 'badge-primary' : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'}`}
               >
@@ -436,7 +436,7 @@ export default function LinkDetail() {
             </div>
             {link.password && (
               <div>
-                <p className="text-sm text-dark-500 dark:text-dark-400">Password Protected</p>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">Password Protected</p>
                 <span className="badge badge-gray mt-1">Yes</span>
               </div>
             )}
@@ -444,20 +444,20 @@ export default function LinkDetail() {
 
           {/* Top Referers */}
           <div className="card p-6">
-            <h3 className="font-semibold text-dark-900 dark:text-white mb-4">Top Referrers</h3>
+            <h3 className="font-semibold text-neutral-900 dark:text-white mb-4">Top Referrers</h3>
             {analytics?.top_referers && analytics.top_referers.length > 0 ? (
               <div className="space-y-2">
                 {analytics.top_referers.slice(0, 5).map((ref) => (
                   <div key={ref.referer} className="flex items-center justify-between text-sm">
-                    <span className="text-dark-600 dark:text-dark-300 truncate flex-1">
+                    <span className="text-neutral-600 dark:text-neutral-300 truncate flex-1">
                       {new URL(ref.referer).hostname}
                     </span>
-                    <span className="text-dark-400 ml-2">{ref.count}</span>
+                    <span className="text-neutral-400 ml-2">{ref.count}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-dark-400 text-sm">No referrer data yet</p>
+              <p className="text-neutral-400 text-sm">No referrer data yet</p>
             )}
           </div>
         </div>

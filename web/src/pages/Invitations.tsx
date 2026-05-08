@@ -86,29 +86,29 @@ export default function Invitations() {
     <div className="space-y-6 max-w-3xl">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-dark-900 dark:text-white">Invitations</h1>
-        <p className="text-dark-500 dark:text-dark-400 mt-1">
+        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Invitations</h1>
+        <p className="text-neutral-500 dark:text-neutral-400 mt-1">
           Invite people to join {activeWorkspace?.name ?? 'your workspace'}
         </p>
       </div>
 
       {/* Invite card */}
       <div className="card">
-        <div className="p-6 border-b border-dark-100 dark:border-dark-700">
+        <div className="p-6 border-b border-neutral-100 dark:border-neutral-700">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
               <Mail className="w-5 h-5 text-teal-600 dark:text-teal-400" />
             </div>
             <div>
-              <h2 className="font-semibold text-dark-900 dark:text-white">Invite Team Members</h2>
-              <p className="text-sm text-dark-500 dark:text-dark-400">Send an invite or share a link</p>
+              <h2 className="font-semibold text-neutral-900 dark:text-white">Invite Team Members</h2>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">Send an invite or share a link</p>
             </div>
           </div>
         </div>
 
         <div className="p-6 space-y-5">
           {/* Tabs */}
-          <div className="flex gap-1 p-1 bg-dark-100 dark:bg-dark-800 rounded-xl w-fit">
+          <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl w-fit">
             {(['email', 'link'] as const).map(t => (
               <button
                 key={t}
@@ -116,8 +116,8 @@ export default function Invitations() {
                 className={clsx(
                   'px-4 py-1.5 rounded-lg text-sm font-medium transition-all',
                   tab === t
-                    ? 'bg-white dark:bg-dark-700 text-dark-900 dark:text-white shadow-sm'
-                    : 'text-dark-500 dark:text-dark-400'
+                    ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm'
+                    : 'text-neutral-500 dark:text-neutral-400'
                 )}
               >
                 {t === 'email' ? 'Invite by Email' : 'Invite by Link'}
@@ -162,13 +162,13 @@ export default function Invitations() {
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm text-dark-600 dark:text-dark-300">
+              <p className="text-sm text-neutral-600 dark:text-neutral-300">
                 Share this link with your team. Anyone with this link can request to join.
               </p>
-              <div className="flex items-center gap-3 p-4 bg-dark-50 dark:bg-dark-800 rounded-xl">
+              <div className="flex items-center gap-3 p-4 bg-neutral-50 dark:bg-neutral-800 rounded-xl">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <Link2 className="w-4 h-4 shrink-0 text-dark-400" />
-                  <code className="text-sm font-mono text-dark-700 dark:text-dark-300 truncate">
+                  <Link2 className="w-4 h-4 shrink-0 text-neutral-400" />
+                  <code className="text-sm font-mono text-neutral-700 dark:text-neutral-300 truncate">
                     mdl.cc/join?code={inviteCode}
                   </code>
                 </div>
@@ -178,13 +178,13 @@ export default function Invitations() {
                 </button>
                 <button
                   onClick={regenerateInviteCode}
-                  className="p-2 rounded-lg hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors"
+                  className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                   title="Generate new code"
                 >
-                  <RefreshCw className="w-4 h-4 text-dark-400" />
+                  <RefreshCw className="w-4 h-4 text-neutral-400" />
                 </button>
               </div>
-              <p className="text-xs text-dark-400">Regenerating the code will invalidate the previous link.</p>
+              <p className="text-xs text-neutral-400">Regenerating the code will invalidate the previous link.</p>
             </div>
           )}
         </div>
@@ -192,29 +192,29 @@ export default function Invitations() {
 
       {/* Pending invitations */}
       <div className="card">
-        <div className="px-6 py-4 border-b border-dark-100 dark:border-dark-700 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-700 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-500" />
-            <h2 className="font-semibold text-dark-900 dark:text-white">
-              Pending <span className="text-dark-400 font-normal">({pending.length})</span>
+            <h2 className="font-semibold text-neutral-900 dark:text-white">
+              Pending <span className="text-neutral-400 font-normal">({pending.length})</span>
             </h2>
           </div>
           <button
             onClick={fetchPending}
             disabled={loadingList}
-            className="p-1.5 rounded-lg hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
             title="Refresh"
           >
-            <RefreshCw className={clsx('w-4 h-4 text-dark-400', loadingList && 'animate-spin')} />
+            <RefreshCw className={clsx('w-4 h-4 text-neutral-400', loadingList && 'animate-spin')} />
           </button>
         </div>
 
         {pending.length === 0 ? (
           <div className="px-6 py-8 text-center">
-            <p className="text-sm text-dark-400">No pending invitations</p>
+            <p className="text-sm text-neutral-400">No pending invitations</p>
           </div>
         ) : (
-          <div className="divide-y divide-dark-100 dark:divide-dark-700">
+          <div className="divide-y divide-neutral-100 dark:divide-neutral-700">
             {pending.map(inv => (
               <div key={inv.id} className="flex items-center justify-between px-6 py-4">
                 <div className="flex items-center gap-3">
@@ -224,8 +224,8 @@ export default function Invitations() {
                     </span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-dark-900 dark:text-white">{inv.email}</p>
-                    <p className="text-xs text-dark-400">
+                    <p className="text-sm font-medium text-neutral-900 dark:text-white">{inv.email}</p>
+                    <p className="text-xs text-neutral-400">
                       Invited {new Date(inv.created_at).toLocaleDateString()}
                       {inv.invited_by_name && ` · by ${inv.invited_by_name}`}
                     </p>
@@ -309,13 +309,13 @@ function ActiveMembers({ workspaceId }: { workspaceId?: string }) {
 
   return (
     <div className="card">
-      <div className="px-6 py-4 border-b border-dark-100 dark:border-dark-700 flex items-center gap-2">
+      <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-700 flex items-center gap-2">
         <UserCheck className="w-4 h-4 text-emerald-500" />
-        <h2 className="font-semibold text-dark-900 dark:text-white">
-          Members <span className="text-dark-400 font-normal">({members.length})</span>
+        <h2 className="font-semibold text-neutral-900 dark:text-white">
+          Members <span className="text-neutral-400 font-normal">({members.length})</span>
         </h2>
       </div>
-      <div className="divide-y divide-dark-100 dark:divide-dark-700">
+      <div className="divide-y divide-neutral-100 dark:divide-neutral-700">
         {members.map(m => (
           <div key={m.id} className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-3">
@@ -335,8 +335,8 @@ function ActiveMembers({ workspaceId }: { workspaceId?: string }) {
                 </span>
               </div>
               <div>
-                <p className="text-sm font-medium text-dark-900 dark:text-white">{m.name || m.email}</p>
-                <p className="text-xs text-dark-400">{m.email}</p>
+                <p className="text-sm font-medium text-neutral-900 dark:text-white">{m.name || m.email}</p>
+                <p className="text-xs text-neutral-400">{m.email}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">

@@ -95,20 +95,20 @@ export default function Join() {
   };
 
   // ── Style tokens ──────────────────────────────────────────────────────────
-  const bgColor     = isDark ? '#0f172a' : '#f8fafc';
-  const cardColor   = isDark ? '#1e293b' : '#ffffff';
-  const cardBorder  = isDark ? '1px solid #2d3748' : '1px solid #e5e7eb';
-  const textPrimary = isDark ? '#f0f0f0' : '#181e25';
+  const bgColor     = isDark ? '#010619' : '#f8f9fa';
+  const cardColor   = isDark ? '#1e2f47' : '#ffffff';
+  const cardBorder  = isDark ? '1px solid #1e2f47' : '1px solid #e5e7eb';
+  const textPrimary = isDark ? '#f0f2f5' : '#0c1830';
   const textMuted   = '#8e8e93';
-  const inputBg     = isDark ? '#0f172a' : '#f8fafc';
-  const inputBorder = isDark ? '1.5px solid #334155' : '1.5px solid #e5e7eb';
-  const labelColor  = isDark ? '#94a3b8' : '#6b7280';
-  const badgeBg     = isDark ? '#0f172a' : '#f0f4ff';
+  const inputBg     = isDark ? '#010619' : '#f8f9fa';
+  const inputBorder = isDark ? '1.5px solid #1e2f47' : '1.5px solid #e5e7eb';
+  const labelColor  = isDark ? '#9ca3af' : '#6b7280';
+  const badgeBg     = isDark ? '#010619' : '#eef3ff';
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '10px 16px', borderRadius: '10px',
     border: inputBorder, background: inputBg, color: textPrimary,
-    fontSize: '14px', fontFamily: 'DM Sans, sans-serif',
+    fontSize: '14px', fontFamily: 'Inter, sans-serif',
     outline: 'none', boxSizing: 'border-box',
   };
   const labelStyle: React.CSSProperties = {
@@ -117,9 +117,9 @@ export default function Join() {
   };
   const btnPrimary: React.CSSProperties = {
     width: '100%', padding: '11px 20px', borderRadius: '8px',
-    background: '#1456f0', color: '#ffffff', border: 'none',
+    background: '#5b8ffe', color: '#ffffff', border: 'none',
     fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-    fontFamily: 'DM Sans, sans-serif', marginTop: '8px',
+    fontFamily: 'Inter, sans-serif', marginTop: '8px',
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -137,22 +137,25 @@ export default function Join() {
 
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px', justifyContent: 'center' }}>
-            <div style={{
-              width: '36px', height: '36px', borderRadius: '12px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#1456f0', flexShrink: 0,
-            }}>
+            <div
+              className="ring-accent"
+              style={{
+                width: '36px', height: '36px', borderRadius: '12px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'linear-gradient(135deg, #0c1830 0%, #1c45cf 100%)', flexShrink: 0,
+              }}
+            >
               <Link2 style={{ width: '20px', height: '20px', color: '#ffffff' }} />
             </div>
-            <span style={{ fontWeight: 600, fontSize: '24px', color: textPrimary }}>
-              MDL<span style={{ color: '#1456f0' }}>.cc</span>
+            <span className="font-display" style={{ fontWeight: 600, fontSize: '24px', color: textPrimary, letterSpacing: '-0.015em' }}>
+              MDL<span style={{ color: '#00c7f9' }}>.cc</span>
             </span>
           </div>
 
           {/* ── Loading ── */}
           {mode === 'loading' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '24px 0' }}>
-              <Loader2 style={{ width: '32px', height: '32px', color: '#1456f0', animation: 'spin 1s linear infinite' }} />
+              <Loader2 style={{ width: '32px', height: '32px', color: '#5b8ffe', animation: 'spin 1s linear infinite' }} />
               <p style={{ fontSize: '14px', color: textMuted }}>Validating invitation…</p>
             </div>
           )}
@@ -169,7 +172,7 @@ export default function Join() {
           {/* ── Accepting ── */}
           {mode === 'accepting' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '24px 0', textAlign: 'center' }}>
-              <Loader2 style={{ width: '32px', height: '32px', color: '#1456f0', animation: 'spin 1s linear infinite' }} />
+              <Loader2 style={{ width: '32px', height: '32px', color: '#5b8ffe', animation: 'spin 1s linear infinite' }} />
               <p style={{ fontSize: '14px', color: textMuted }}>Joining workspace…</p>
             </div>
           )}
@@ -197,7 +200,7 @@ export default function Join() {
                 <div style={{
                   width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: '#1456f0',
+                  background: 'linear-gradient(135deg, #5b8ffe 0%, #00c7f9 100%)',
                 }}>
                   <span style={{ color: '#fff', fontWeight: 700, fontSize: '14px' }}>
                     {invite.workspace_name[0].toUpperCase()}
@@ -215,7 +218,7 @@ export default function Join() {
               </p>
 
               {error && (
-                <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: '10px', fontSize: '14px', background: '#fee2e2', color: '#dc2626' }}>
+                <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: '10px', fontSize: '14px', background: '#fde8eb', color: '#dc3545' }}>
                   {error}
                 </div>
               )}
@@ -264,7 +267,7 @@ export default function Join() {
                 <div style={{
                   width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: '#1456f0',
+                  background: 'linear-gradient(135deg, #5b8ffe 0%, #00c7f9 100%)',
                 }}>
                   <span style={{ color: '#fff', fontWeight: 700, fontSize: '14px' }}>
                     {invite.workspace_name[0].toUpperCase()}
@@ -282,7 +285,7 @@ export default function Join() {
               </p>
 
               {error && (
-                <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: '10px', fontSize: '14px', background: '#fee2e2', color: '#dc2626' }}>
+                <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: '10px', fontSize: '14px', background: '#fde8eb', color: '#dc3545' }}>
                   {error}
                 </div>
               )}

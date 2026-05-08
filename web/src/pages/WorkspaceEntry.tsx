@@ -40,16 +40,19 @@ export default function WorkspaceEntry() {
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: isDark ? '#0f172a' : '#f8fafc' }}
+      style={{ background: isDark ? '#010619' : '#f8f9fa' }}
     >
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex items-center gap-2.5 mb-10 justify-center">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#1456f0' }}>
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center ring-accent"
+            style={{ background: 'linear-gradient(135deg, #0c1830 0%, #1c45cf 100%)' }}
+          >
             <Link2 className="w-5 h-5 text-white" />
           </div>
-          <span className="font-display font-semibold text-2xl" style={{ color: isDark ? '#f0f0f0' : '#181e25' }}>
-            MDL<span style={{ color: '#1456f0' }}>.cc</span>
+          <span className="font-display font-semibold text-2xl tracking-tight" style={{ color: isDark ? '#f0f2f5' : '#0c1830' }}>
+            MDL<span style={{ color: '#00c7f9' }}>.cc</span>
           </span>
         </div>
 
@@ -57,11 +60,11 @@ export default function WorkspaceEntry() {
         <div
           className="rounded-2xl p-8 shadow-xl"
           style={{
-            background: isDark ? '#1e293b' : '#ffffff',
-            border: isDark ? '1px solid #2d3748' : '1px solid #e5e7eb',
+            background: isDark ? '#1e2f47' : '#ffffff',
+            border: isDark ? '1px solid #1e2f47' : '1px solid #e5e7eb',
           }}
         >
-          <h1 className="text-xl font-semibold mb-1" style={{ color: isDark ? '#f8fafc' : '#181e25' }}>
+          <h1 className="text-xl font-semibold mb-1" style={{ color: isDark ? '#f8f9fa' : '#0c1830' }}>
             Sign in to your workspace
           </h1>
           <p className="text-sm mb-6" style={{ color: '#8e8e93' }}>
@@ -69,21 +72,21 @@ export default function WorkspaceEntry() {
           </p>
 
           {error && (
-            <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: '#fee2e2', color: '#dc2626' }}>
+            <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: '#fde8eb', color: '#dc3545' }}>
               {error}
             </div>
           )}
 
           <form onSubmit={handleContinue} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: isDark ? '#94a3b8' : '#6b7280' }}>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
                 Workspace URL
               </label>
               <div
                 className="flex items-center rounded-xl overflow-hidden"
                 style={{
-                  border: isDark ? '1.5px solid #334155' : '1.5px solid #e5e7eb',
-                  background: isDark ? '#0f172a' : '#f8fafc',
+                  border: isDark ? '1.5px solid #1e2f47' : '1.5px solid #e5e7eb',
+                  background: isDark ? '#010619' : '#f8f9fa',
                 }}
               >
                 <span className="px-3 py-2.5 text-sm shrink-0" style={{ color: '#8e8e93' }}>
@@ -96,7 +99,7 @@ export default function WorkspaceEntry() {
                   placeholder="your-workspace"
                   autoFocus
                   className="flex-1 bg-transparent outline-none py-2.5 pr-3 text-sm"
-                  style={{ color: isDark ? '#f0f0f0' : '#181e25' }}
+                  style={{ color: isDark ? '#f0f2f5' : '#0c1830' }}
                 />
               </div>
             </div>
@@ -104,8 +107,7 @@ export default function WorkspaceEntry() {
             <button
               type="submit"
               disabled={loading || !slug.trim()}
-              className="btn btn-primary w-full gap-2"
-              style={{ background: '#1456f0' }}
+              className="btn btn-primary btn-lg w-full gap-2"
             >
               {loading ? 'Looking up…' : 'Continue'}
               {!loading && <ArrowRight className="w-4 h-4" />}
@@ -117,13 +119,13 @@ export default function WorkspaceEntry() {
         <div
           className="mt-4 rounded-2xl p-5"
           style={{
-            background: isDark ? '#1e293b' : '#ffffff',
-            border: isDark ? '1px solid #2d3748' : '1px solid #e5e7eb',
+            background: isDark ? '#1e2f47' : '#ffffff',
+            border: isDark ? '1px solid #1e2f47' : '1px solid #e5e7eb',
           }}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium" style={{ color: isDark ? '#f0f0f0' : '#181e25' }}>
+              <p className="text-sm font-medium" style={{ color: isDark ? '#f0f2f5' : '#0c1830' }}>
                 New to MDL.cc?
               </p>
               <p className="text-xs mt-0.5" style={{ color: '#8e8e93' }}>

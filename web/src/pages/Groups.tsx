@@ -14,9 +14,9 @@ import clsx from 'clsx';
 
 const GROUP_COLORS = [
   '#10B981', // Green
-  '#3B82F6', // Blue
+  '#5b8ffe', // Blue
   '#F59E0B', // Amber
-  '#EF4444', // Red
+  '#dc3545', // Red
   '#8B5CF6', // Purple
   '#EC4899', // Pink
   '#06B6D4', // Cyan
@@ -97,8 +97,8 @@ export default function Groups() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-dark-900 dark:text-white">Groups</h1>
-          <p className="text-dark-500 dark:text-dark-400 mt-1">
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Groups</h1>
+          <p className="text-neutral-500 dark:text-neutral-400 mt-1">
             Organize your links into folders for better management
           </p>
         </div>
@@ -111,7 +111,7 @@ export default function Groups() {
       {/* Groups Grid */}
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-secondary-500 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : groups.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -121,9 +121,9 @@ export default function Groups() {
               <div className="absolute top-4 right-4">
                 <button
                   onClick={() => setActiveMenu(activeMenu === group.id ? null : group.id)}
-                  className="p-1.5 rounded hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
+                  className="p-1.5 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
                 >
-                  <MoreHorizontal className="w-4 h-4 text-dark-400" />
+                  <MoreHorizontal className="w-4 h-4 text-neutral-400" />
                 </button>
                 {activeMenu === group.id && (
                   <>
@@ -131,14 +131,14 @@ export default function Groups() {
                     <div className="absolute right-0 top-full mt-1 z-20 w-36 py-1 card shadow-lg">
                       <button
                         onClick={() => openEditModal(group)}
-                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-700"
+                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700"
                       >
                         <Edit className="w-4 h-4" />
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete(group.id)}
-                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-dark-100 dark:hover:bg-dark-700"
+                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-neutral-100 dark:hover:bg-neutral-700"
                       >
                         <Trash2 className="w-4 h-4" />
                         Delete
@@ -157,11 +157,11 @@ export default function Groups() {
                   <FolderOpen className="w-6 h-6" style={{ color: group.color }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-dark-900 dark:text-white truncate">
+                  <h3 className="font-semibold text-neutral-900 dark:text-white truncate">
                     {group.name}
                   </h3>
                   {group.description && (
-                    <p className="text-sm text-dark-500 dark:text-dark-400 mt-1 line-clamp-2">
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-2">
                       {group.description}
                     </p>
                   )}
@@ -169,14 +169,14 @@ export default function Groups() {
               </div>
 
               {/* Link Count */}
-              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-dark-100 dark:border-dark-700">
-                <Link2 className="w-4 h-4 text-dark-400" />
-                <span className="text-sm text-dark-500 dark:text-dark-400">
+              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-neutral-100 dark:border-neutral-700">
+                <Link2 className="w-4 h-4 text-neutral-400" />
+                <span className="text-sm text-neutral-500 dark:text-neutral-400">
                   {(group as any).link_count || 0} links
                 </span>
                 <Link
                   to={`/links?group=${group.id}`}
-                  className="ml-auto text-sm text-primary-500 hover:text-primary-600"
+                  className="ml-auto text-sm text-secondary-500 hover:text-secondary-600"
                 >
                   View links →
                 </Link>
@@ -186,11 +186,11 @@ export default function Groups() {
         </div>
       ) : (
         <div className="card flex flex-col items-center justify-center py-16">
-          <div className="w-16 h-16 rounded-full bg-dark-100 dark:bg-dark-800 flex items-center justify-center mb-4">
-            <FolderOpen className="w-8 h-8 text-dark-400" />
+          <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-4">
+            <FolderOpen className="w-8 h-8 text-neutral-400" />
           </div>
-          <h3 className="font-medium text-dark-900 dark:text-white mb-1">No groups yet</h3>
-          <p className="text-dark-500 dark:text-dark-400 mb-4 text-center max-w-sm">
+          <h3 className="font-medium text-neutral-900 dark:text-white mb-1">No groups yet</h3>
+          <p className="text-neutral-500 dark:text-neutral-400 mb-4 text-center max-w-sm">
             Create groups to organize your links by campaign, project, or category
           </p>
           <button onClick={openCreateModal} className="btn btn-primary">
@@ -205,12 +205,12 @@ export default function Groups() {
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModalOpen(false)}>
           <div className="modal-content">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-dark-900 dark:text-white">
+              <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">
                 {editingGroup ? 'Edit Group' : 'Create Group'}
               </h2>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-2 rounded-lg hover:bg-dark-100 dark:hover:bg-dark-800 transition-colors"
+                className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -219,7 +219,7 @@ export default function Groups() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
                   Name
                 </label>
                 <input
@@ -235,7 +235,7 @@ export default function Groups() {
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
                   Description (optional)
                 </label>
                 <textarea
@@ -249,7 +249,7 @@ export default function Groups() {
 
               {/* Color */}
               <div>
-                <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-2">
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                   Color
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -260,7 +260,7 @@ export default function Groups() {
                       onClick={() => setFormData({ ...formData, color })}
                       className={clsx(
                         'w-8 h-8 rounded-lg transition-transform',
-                        formData.color === color && 'ring-2 ring-offset-2 ring-dark-400 scale-110'
+                        formData.color === color && 'ring-2 ring-offset-2 ring-neutral-400 scale-110'
                       )}
                       style={{ backgroundColor: color }}
                     />
@@ -269,8 +269,8 @@ export default function Groups() {
               </div>
 
               {/* Preview */}
-              <div className="p-4 bg-dark-50 dark:bg-dark-800 rounded-lg">
-                <p className="text-xs text-dark-500 dark:text-dark-400 mb-2">PREVIEW:</p>
+              <div className="p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">PREVIEW:</p>
                 <div className="flex items-center gap-3">
                   <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center"
@@ -279,11 +279,11 @@ export default function Groups() {
                     <FolderOpen className="w-5 h-5" style={{ color: formData.color }} />
                   </div>
                   <div>
-                    <p className="font-medium text-dark-900 dark:text-white">
+                    <p className="font-medium text-neutral-900 dark:text-white">
                       {formData.name || 'Group Name'}
                     </p>
                     {formData.description && (
-                      <p className="text-sm text-dark-500 dark:text-dark-400 truncate">
+                      <p className="text-sm text-neutral-500 dark:text-neutral-400 truncate">
                         {formData.description}
                       </p>
                     )}

@@ -7,31 +7,32 @@ import { format, parseISO } from 'date-fns';
 import { useTheme } from '../contexts/ThemeContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 
-// Minimax-style stat accent colors
+// Stat-card accent palette: navy / cyan / secondary / success — matches the
+// brand triad from the style guide.
 const STATS = [
   {
     label: 'Active Links',
     badge: 'Total',
     icon: Link2,
     key: 'total_links' as const,
-    iconBg: '#eef2ff',
-    iconColor: '#1456f0',
+    iconBg: '#eef3ff',  // secondary 50
+    iconColor: '#3b73fb', // secondary 500
   },
   {
     label: 'Total Clicks',
     badge: 'All Time',
     icon: MousePointerClick,
     key: 'total_clicks' as const,
-    iconBg: '#eff6ff',
-    iconColor: '#3b82f6',
+    iconBg: '#e6faff',  // accent 50
+    iconColor: '#00a3d4', // accent 500
   },
   {
     label: 'Clicks Today',
     badge: 'Today',
     icon: TrendingUp,
     key: 'today_clicks' as const,
-    iconBg: '#e8ffea',
-    iconColor: '#16a34a',
+    iconBg: '#e9f8ed',  // success 50
+    iconColor: '#25a745',
   },
 ];
 
@@ -57,7 +58,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-center h-64">
         <div
           className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-          style={{ borderColor: '#1456f0', borderTopColor: 'transparent' }}
+          style={{ borderColor: '#5b8ffe', borderTopColor: 'transparent' }}
         />
       </div>
     );
@@ -67,10 +68,10 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* ── Page header ───────────────────────────────────────────────────── */}
       <div>
-        <h1 className="font-display text-2xl font-semibold" style={{ color: dark ? '#f0f0f0' : '#181e25' }}>
+        <h1 className="font-display text-2xl font-semibold" style={{ color: dark ? '#f0f2f5' : '#0c1830' }}>
           Dashboard
         </h1>
-        <p className="text-sm mt-1" style={{ color: '#8e8e93', fontFamily: '"DM Sans", sans-serif' }}>
+        <p className="text-sm mt-1" style={{ color: '#8e8e93', fontFamily: '"Inter", sans-serif' }}>
           Welcome to MDL.cc — the middle-point between you and your audience
         </p>
       </div>
@@ -88,7 +89,7 @@ export default function Dashboard() {
               </div>
               <span
                 className="badge"
-                style={{ background: dark ? '#2d3748' : '#f0f0f0', color: dark ? '#94a3b8' : '#45515e', fontSize: '11px', fontWeight: 600 }}
+                style={{ background: dark ? '#1e2f47' : '#f0f2f5', color: dark ? '#9ca3af' : '#45515e', fontSize: '11px', fontWeight: 600 }}
               >
                 {badge}
               </span>
@@ -105,7 +106,7 @@ export default function Dashboard() {
         <div className="card p-6">
           <h3
             className="font-display font-semibold mb-4"
-            style={{ fontSize: '15px', color: dark ? '#f0f0f0' : '#181e25' }}
+            style={{ fontSize: '15px', color: dark ? '#f0f2f5' : '#0c1830' }}
           >
             Clicks Over Time
           </h3>
@@ -130,23 +131,23 @@ export default function Dashboard() {
                   />
                   <Tooltip
                     contentStyle={{
-                      background: '#181e25',
-                      border: 'none',
+                      background: '#0c1830',
+                      border: '1px solid rgba(0,199,249,0.20)',
                       borderRadius: '10px',
-                      color: '#f0f0f0',
+                      color: '#f0f2f5',
                       fontSize: '12px',
                       padding: '8px 12px',
-                      boxShadow: 'rgba(44, 30, 116, 0.16) 0px 8px 20px',
+                      boxShadow: 'rgba(0,199,249, 0.20) 0px 8px 24px',
                     }}
                     labelFormatter={(d) => format(parseISO(d as string), 'MMM d, yyyy')}
                   />
                   <Line
                     type="monotone"
                     dataKey="count"
-                    stroke="#1456f0"
+                    stroke="#00c7f9"
                     strokeWidth={2.5}
                     dot={false}
-                    activeDot={{ r: 5, fill: '#1456f0', strokeWidth: 0 }}
+                    activeDot={{ r: 5, fill: '#00c7f9', stroke: '#0c1830', strokeWidth: 2 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -162,15 +163,15 @@ export default function Dashboard() {
         <div className="card overflow-hidden">
           <div
             className="flex items-center justify-between px-5 py-4"
-            style={{ borderBottom: `1px solid ${dark ? '#2d3748' : '#f2f3f5'}` }}
+            style={{ borderBottom: `1px solid ${dark ? '#1e2f47' : '#f0f2f5'}` }}
           >
-            <h3 className="font-display font-semibold" style={{ fontSize: '15px', color: dark ? '#f0f0f0' : '#181e25' }}>
+            <h3 className="font-display font-semibold" style={{ fontSize: '15px', color: dark ? '#f0f2f5' : '#0c1830' }}>
               Recent Links
             </h3>
             <Link
               to="/links"
               className="flex items-center gap-1 text-xs font-semibold"
-              style={{ color: '#1456f0' }}
+              style={{ color: '#5b8ffe' }}
             >
               View all <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
@@ -182,15 +183,15 @@ export default function Dashboard() {
                   key={link.id}
                   to={`/links/${link.id}`}
                   className="flex items-center justify-between px-5 py-3.5 transition-colors"
-                  style={{ borderBottom: `1px solid ${dark ? '#2d3748' : '#f8f9fa'}` }}
+                  style={{ borderBottom: `1px solid ${dark ? '#1e2f47' : '#f8f9fa'}` }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = dark ? 'rgba(255,255,255,0.04)' : '#fafafa'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate" style={{ color: dark ? '#f0f0f0' : '#181e25' }}>
+                    <p className="text-sm font-medium truncate" style={{ color: dark ? '#f0f2f5' : '#0c1830' }}>
                       {link.title || link.short_code}
                     </p>
-                    <p className="text-xs truncate mt-0.5" style={{ color: '#1456f0' }}>
+                    <p className="text-xs truncate mt-0.5" style={{ color: '#5b8ffe' }}>
                       {shortLinkDisplay(link)}
                     </p>
                   </div>
@@ -215,16 +216,16 @@ export default function Dashboard() {
       <div className="card overflow-hidden">
         <div
           className="flex items-center justify-between px-5 py-4"
-          style={{ borderBottom: `1px solid ${dark ? '#2d3748' : '#f2f3f5'}` }}
+          style={{ borderBottom: `1px solid ${dark ? '#1e2f47' : '#f0f2f5'}` }}
         >
-          <h3 className="font-display font-semibold" style={{ fontSize: '15px', color: dark ? '#f0f0f0' : '#181e25' }}>
+          <h3 className="font-display font-semibold" style={{ fontSize: '15px', color: dark ? '#f0f2f5' : '#0c1830' }}>
             Top Performing Links
           </h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr style={{ borderBottom: `1px solid ${dark ? '#2d3748' : '#f2f3f5'}` }}>
+              <tr style={{ borderBottom: `1px solid ${dark ? '#1e2f47' : '#f0f2f5'}` }}>
                 {['Link', 'Destination', 'Clicks'].map((col, i) => (
                   <th
                     key={col}
@@ -241,7 +242,7 @@ export default function Dashboard() {
                 data.top_links.map((link, index) => (
                   <tr
                     key={link.id}
-                    style={{ borderBottom: `1px solid ${dark ? '#2d3748' : '#f8f9fa'}` }}
+                    style={{ borderBottom: `1px solid ${dark ? '#1e2f47' : '#f8f9fa'}` }}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = dark ? 'rgba(255,255,255,0.04)' : '#fafafa'; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
                   >
@@ -249,14 +250,14 @@ export default function Dashboard() {
                       <div className="flex items-center gap-3">
                         <span
                           className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
-                          style={{ background: dark ? 'rgba(20,86,240,0.15)' : '#eef2ff', color: dark ? '#60a5fa' : '#1456f0' }}
+                          style={{ background: dark ? 'rgba(91,143,254,0.15)' : '#eef3ff', color: dark ? '#5b8ffe' : '#5b8ffe' }}
                         >
                           {index + 1}
                         </span>
                         <Link
                           to={`/links/${link.id}`}
                           className="text-sm font-medium"
-                          style={{ color: dark ? '#60a5fa' : '#1456f0' }}
+                          style={{ color: dark ? '#5b8ffe' : '#5b8ffe' }}
                         >
                           {shortLinkDisplay(link)}
                         </Link>
@@ -268,7 +269,7 @@ export default function Dashboard() {
                     >
                       {link.original_url}
                     </td>
-                    <td className="px-5 py-3.5 text-right text-sm font-semibold" style={{ color: dark ? '#f0f0f0' : '#181e25' }}>
+                    <td className="px-5 py-3.5 text-right text-sm font-semibold" style={{ color: dark ? '#f0f2f5' : '#0c1830' }}>
                       {link.click_count?.toLocaleString() || 0}
                     </td>
                   </tr>
