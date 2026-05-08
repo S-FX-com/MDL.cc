@@ -30,15 +30,15 @@ function SectionHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="p-6 border-b border-dark-100 dark:border-dark-700">
+    <div className="p-6 border-b border-neutral-100 dark:border-neutral-700">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center', iconBg)}>
             <Icon className={clsx('w-5 h-5', iconColor)} />
           </div>
           <div>
-            <h2 className="font-semibold text-dark-900 dark:text-white">{title}</h2>
-            <p className="text-sm text-dark-500 dark:text-dark-400">{subtitle}</p>
+            <h2 className="font-semibold text-neutral-900 dark:text-white">{title}</h2>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">{subtitle}</p>
           </div>
         </div>
         {action}
@@ -100,39 +100,39 @@ function DnsInstructions({
     <div className="mt-3">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 text-xs font-medium text-primary-600 dark:text-primary-400"
+        className="flex items-center gap-1.5 text-xs font-medium text-secondary-600 dark:text-secondary-400"
       >
         {open ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         How to configure DNS
       </button>
       {open && (
-        <div className="mt-3 p-4 rounded-xl bg-dark-50 dark:bg-dark-800 space-y-3 text-sm">
-          <p className="font-medium text-dark-900 dark:text-white">
+        <div className="mt-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800 space-y-3 text-sm">
+          <p className="font-medium text-neutral-900 dark:text-white">
             Add the following DNS records at your domain registrar:
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-xs font-mono">
               <thead>
-                <tr className="text-dark-500 dark:text-dark-400 text-left">
+                <tr className="text-neutral-500 dark:text-neutral-400 text-left">
                   <th className="pb-1 pr-4">Type</th>
                   <th className="pb-1 pr-4">Host / Name</th>
                   <th className="pb-1">Value / Target</th>
                 </tr>
               </thead>
-              <tbody className="text-dark-900 dark:text-white">
+              <tbody className="text-neutral-900 dark:text-white">
                 <tr>
                   <td className="pr-4 py-1">
                     <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">CNAME</span>
                   </td>
                   <td className="pr-4 py-1">{hostLabel}</td>
-                  <td className="py-1 text-primary-600 dark:text-primary-400">cname.mdl.cc</td>
+                  <td className="py-1 text-secondary-600 dark:text-secondary-400">cname.mdl.cc</td>
                 </tr>
                 <tr>
                   <td className="pr-4 py-1">
                     <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded">TXT</span>
                   </td>
                   <td className="pr-4 py-1">{verifyHost}</td>
-                  <td className="py-1 text-primary-600 dark:text-primary-400 break-all">{verifyToken}</td>
+                  <td className="py-1 text-secondary-600 dark:text-secondary-400 break-all">{verifyToken}</td>
                 </tr>
               </tbody>
             </table>
@@ -167,9 +167,9 @@ function DnsInstructions({
               DNS changes can take up to 48 hours to propagate globally. Click <strong>Verify</strong> once you've added both records.
             </p>
           </div>
-          <p className="text-xs text-dark-500 dark:text-dark-400">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
             Need help?{' '}
-            <a href="mailto:support@mdl.cc" className="text-primary-600 dark:text-primary-400 underline underline-offset-2">
+            <a href="mailto:support@mdl.cc" className="text-secondary-600 dark:text-secondary-400 underline underline-offset-2">
               Contact support
             </a>
           </p>
@@ -337,8 +337,8 @@ export default function Settings() {
     <div className="space-y-6 max-w-3xl">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-dark-900 dark:text-white">Settings</h1>
-        <p className="text-dark-500 dark:text-dark-400 mt-1">Customize your MDL.cc experience</p>
+        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Settings</h1>
+        <p className="text-neutral-500 dark:text-neutral-400 mt-1">Customize your MDL.cc experience</p>
       </div>
 
       {/* ── 1. Profile ──────────────────────────────────────────────────────── */}
@@ -351,7 +351,7 @@ export default function Settings() {
           subtitle="Your personal display information"
         />
         <div className="p-6">
-          <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">
+          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
             Display name
           </label>
           <div className="flex gap-3">
@@ -385,19 +385,19 @@ export default function Settings() {
         />
         <div className="p-6">
           {hasAgency ? (
-            <div className="flex items-center gap-3 p-4 bg-dark-50 dark:bg-dark-800 rounded-xl">
+            <div className="flex items-center gap-3 p-4 bg-neutral-50 dark:bg-neutral-800 rounded-xl">
               <div className="w-9 h-9 rounded-lg bg-violet-500 flex items-center justify-center shrink-0">
                 <span className="text-white font-bold text-sm">{agencyName[0]?.toUpperCase() ?? 'A'}</span>
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-dark-900 dark:text-white">{agencyName}</p>
-                <p className="text-xs text-dark-500 dark:text-dark-400">Agency account active</p>
+                <p className="font-semibold text-neutral-900 dark:text-white">{agencyName}</p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">Agency account active</p>
               </div>
               <span className="badge badge-primary">Active</span>
             </div>
           ) : showAgencyForm ? (
             <div className="space-y-3">
-              <p className="text-sm text-dark-600 dark:text-dark-300">
+              <p className="text-sm text-neutral-600 dark:text-neutral-300">
                 Give your agency a name. This will be used across workspaces and team invitations.
               </p>
               <div className="flex gap-2">
@@ -464,7 +464,7 @@ export default function Settings() {
         <div className="p-6 space-y-3">
           {/* Add workspace form */}
           {showNewWsForm && (
-            <div className="flex gap-2 p-3 rounded-xl border border-dashed border-dark-300 dark:border-dark-600">
+            <div className="flex gap-2 p-3 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-600">
               <input
                 type="text"
                 value={newWsName}
@@ -492,8 +492,8 @@ export default function Settings() {
                 className={clsx(
                   'flex items-center justify-between p-4 rounded-xl transition-all cursor-pointer',
                   isActive
-                    ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800'
-                    : 'bg-dark-50 dark:bg-dark-800 border border-transparent hover:border-dark-200 dark:hover:border-dark-600'
+                    ? 'bg-secondary-50 dark:bg-secondary-900/20 border border-secondary-200 dark:border-secondary-800'
+                    : 'bg-neutral-50 dark:bg-neutral-800 border border-transparent hover:border-neutral-200 dark:hover:border-neutral-600'
                 )}
                 onClick={() => editingWsId !== ws.id && setActiveWorkspaceId(ws.id)}
               >
@@ -507,13 +507,13 @@ export default function Settings() {
                   <div className="flex items-center gap-3">
                     <div
                       className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: isActive ? '#1456f0' : '#64748b' }}
+                      style={{ background: isActive ? '#5b8ffe' : '#64748b' }}
                     >
                       <span className="text-white font-bold text-sm">{ws.name[0]?.toUpperCase()}</span>
                     </div>
                     <div>
-                      <p className="font-medium text-dark-900 dark:text-white">{ws.name}</p>
-                      <p className="text-xs text-dark-500 dark:text-dark-400">Role: {ws.role}</p>
+                      <p className="font-medium text-neutral-900 dark:text-white">{ws.name}</p>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400">Role: {ws.role}</p>
                     </div>
                   </div>
                 )}
@@ -523,10 +523,10 @@ export default function Settings() {
                     {isActive && <span className="badge badge-primary">Active</span>}
                     <button
                       onClick={() => setEditingWsId(ws.id)}
-                      className="p-1.5 rounded hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors"
+                      className="p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                       title="Rename workspace"
                     >
-                      <Edit2 className="w-4 h-4 text-dark-400" />
+                      <Edit2 className="w-4 h-4 text-neutral-400" />
                     </button>
                     {workspaces.length > 1 && (
                       <button
@@ -544,7 +544,7 @@ export default function Settings() {
           })}
 
           {!hasAgency && (
-            <p className="text-xs text-dark-400 dark:text-dark-500 pt-1">
+            <p className="text-xs text-neutral-400 dark:text-neutral-500 pt-1">
               <span className="text-violet-600 dark:text-violet-400 font-medium">Create an Agency</span> above to add more workspaces.
             </p>
           )}
@@ -562,7 +562,7 @@ export default function Settings() {
         />
         <div className="p-6 space-y-5">
           {/* Invite tabs */}
-          <div className="flex gap-1 p-1 bg-dark-100 dark:bg-dark-800 rounded-xl w-fit">
+          <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl w-fit">
             {(['email', 'code'] as const).map((tab) => (
               <button
                 key={tab}
@@ -570,8 +570,8 @@ export default function Settings() {
                 className={clsx(
                   'px-4 py-1.5 rounded-lg text-sm font-medium transition-all',
                   inviteTab === tab
-                    ? 'bg-white dark:bg-dark-700 text-dark-900 dark:text-white shadow-sm'
-                    : 'text-dark-500 dark:text-dark-400'
+                    ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm'
+                    : 'text-neutral-500 dark:text-neutral-400'
                 )}
               >
                 {tab === 'email' ? 'Invite by Email' : 'Invite by Code'}
@@ -604,7 +604,7 @@ export default function Settings() {
 
               {/* Workspace assignment for invite */}
               <div>
-                <p className="text-xs font-medium text-dark-600 dark:text-dark-300 mb-2">
+                <p className="text-xs font-medium text-neutral-600 dark:text-neutral-300 mb-2">
                   Assign to workspaces:
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -623,8 +623,8 @@ export default function Settings() {
                         className={clsx(
                           'px-3 py-1 rounded-full text-xs font-medium border transition-all',
                           selected
-                            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                            : 'border-dark-200 dark:border-dark-600 text-dark-500 dark:text-dark-400 hover:border-dark-300'
+                            ? 'border-secondary-500 bg-secondary-50 dark:bg-secondary-900/20 text-secondary-700 dark:text-secondary-300'
+                            : 'border-neutral-200 dark:border-neutral-600 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300'
                         )}
                       >
                         {selected && <Check className="w-3 h-3 inline mr-1" />}
@@ -637,11 +637,11 @@ export default function Settings() {
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm text-dark-600 dark:text-dark-300">
+              <p className="text-sm text-neutral-600 dark:text-neutral-300">
                 Share this code with your team. Anyone with this code can join your agency.
               </p>
-              <div className="flex items-center gap-3 p-4 bg-dark-50 dark:bg-dark-800 rounded-xl">
-                <code className="flex-1 text-xl font-mono font-bold tracking-widest text-dark-900 dark:text-white">
+              <div className="flex items-center gap-3 p-4 bg-neutral-50 dark:bg-neutral-800 rounded-xl">
+                <code className="flex-1 text-xl font-mono font-bold tracking-widest text-neutral-900 dark:text-white">
                   {inviteCode}
                 </code>
                 <button onClick={copyInviteCode} className="btn btn-secondary btn-sm gap-1.5">
@@ -650,13 +650,13 @@ export default function Settings() {
                 </button>
                 <button
                   onClick={regenerateInviteCode}
-                  className="p-2 rounded-lg hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors"
+                  className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                   title="Generate new code"
                 >
-                  <RefreshCw className="w-4 h-4 text-dark-400" />
+                  <RefreshCw className="w-4 h-4 text-neutral-400" />
                 </button>
               </div>
-              <p className="text-xs text-dark-400 dark:text-dark-500">
+              <p className="text-xs text-neutral-400 dark:text-neutral-500">
                 Regenerating the code will invalidate the previous one.
               </p>
             </div>
@@ -664,25 +664,25 @@ export default function Settings() {
 
           {/* Team member list */}
           {teamMembers.length > 0 && (
-            <div className="space-y-2 pt-2 border-t border-dark-100 dark:border-dark-700">
-              <p className="text-sm font-medium text-dark-700 dark:text-dark-300">
+            <div className="space-y-2 pt-2 border-t border-neutral-100 dark:border-neutral-700">
+              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
                 Members ({teamMembers.length})
               </p>
               {teamMembers.map((member: TeamMember) => (
-                <div key={member.id} className="rounded-xl border border-dark-100 dark:border-dark-700 overflow-hidden">
+                <div key={member.id} className="rounded-xl border border-neutral-100 dark:border-neutral-700 overflow-hidden">
                   <div
-                    className="flex items-center justify-between p-3 cursor-pointer hover:bg-dark-50 dark:hover:bg-dark-800 transition-colors"
+                    className="flex items-center justify-between p-3 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
                     onClick={() => setExpandedMember(expandedMember === member.id ? null : member.id)}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-dark-200 dark:bg-dark-600 flex items-center justify-center shrink-0">
-                        <span className="text-xs font-bold text-dark-600 dark:text-dark-300">
+                      <div className="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-600 flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold text-neutral-600 dark:text-neutral-300">
                           {member.email[0]?.toUpperCase()}
                         </span>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-dark-900 dark:text-white">{member.email}</p>
-                        <p className="text-xs text-dark-400 dark:text-dark-500">
+                        <p className="text-sm font-medium text-neutral-900 dark:text-white">{member.email}</p>
+                        <p className="text-xs text-neutral-400 dark:text-neutral-500">
                           {member.workspaceIds.length === 0
                             ? 'No workspaces assigned'
                             : `${member.workspaceIds.length} workspace${member.workspaceIds.length > 1 ? 's' : ''}`}
@@ -697,16 +697,16 @@ export default function Settings() {
                         {member.status === 'active' ? 'Active' : 'Pending'}
                       </span>
                       {expandedMember === member.id ? (
-                        <ChevronUp className="w-4 h-4 text-dark-400" />
+                        <ChevronUp className="w-4 h-4 text-neutral-400" />
                       ) : (
-                        <ChevronDown className="w-4 h-4 text-dark-400" />
+                        <ChevronDown className="w-4 h-4 text-neutral-400" />
                       )}
                     </div>
                   </div>
 
                   {expandedMember === member.id && (
-                    <div className="p-3 border-t border-dark-100 dark:border-dark-700 bg-dark-50 dark:bg-dark-800 space-y-3">
-                      <p className="text-xs font-medium text-dark-600 dark:text-dark-300">
+                    <div className="p-3 border-t border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 space-y-3">
+                      <p className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
                         Workspace access:
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -719,8 +719,8 @@ export default function Settings() {
                               className={clsx(
                                 'px-3 py-1 rounded-full text-xs font-medium border transition-all',
                                 hasAccess
-                                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                                  : 'border-dark-200 dark:border-dark-600 text-dark-500 dark:text-dark-400 hover:border-dark-300'
+                                  ? 'border-secondary-500 bg-secondary-50 dark:bg-secondary-900/20 text-secondary-700 dark:text-secondary-300'
+                                  : 'border-neutral-200 dark:border-neutral-600 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300'
                               )}
                             >
                               {hasAccess && <Check className="w-3 h-3 inline mr-1" />}
@@ -757,8 +757,8 @@ export default function Settings() {
         <div className="p-6 space-y-5">
           {/* Add domain form */}
           <div className="space-y-3">
-            <p className="text-sm text-dark-600 dark:text-dark-300">
-              Add a custom domain to create branded short links (e.g. <code className="text-primary-600 dark:text-primary-400">go.yourcompany.com/slug</code>).
+            <p className="text-sm text-neutral-600 dark:text-neutral-300">
+              Add a custom domain to create branded short links (e.g. <code className="text-secondary-600 dark:text-secondary-400">go.yourcompany.com/slug</code>).
             </p>
             <div className="flex gap-3">
               <input
@@ -791,14 +791,14 @@ export default function Settings() {
           </div>
 
           {/* Default domain */}
-          <div className="flex items-center justify-between p-4 bg-dark-50 dark:bg-dark-800 rounded-xl">
+          <div className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800 rounded-xl">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-secondary-500 flex items-center justify-center shrink-0">
                 <span className="text-white font-bold text-sm">M</span>
               </div>
               <div>
-                <p className="font-medium text-dark-900 dark:text-white">mdl.cc</p>
-                <p className="text-xs text-dark-500 dark:text-dark-400">Shared domain</p>
+                <p className="font-medium text-neutral-900 dark:text-white">mdl.cc</p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">Shared domain</p>
               </div>
             </div>
             {!getDefaultDomain(activeWorkspaceId) && (
@@ -814,7 +814,7 @@ export default function Settings() {
                 const isVerifying = verifyingId === d.id;
                 const isDefault = getDefaultDomain(d.workspaceId)?.id === d.id;
                 return (
-                  <div key={d.id} className="rounded-xl border border-dark-100 dark:border-dark-700 overflow-hidden">
+                  <div key={d.id} className="rounded-xl border border-neutral-100 dark:border-neutral-700 overflow-hidden">
                     <div className="flex items-center justify-between p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
@@ -822,10 +822,10 @@ export default function Settings() {
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium text-dark-900 dark:text-white">{d.domain}</p>
+                            <p className="font-medium text-neutral-900 dark:text-white">{d.domain}</p>
                             {isDefault && <span className="badge badge-primary">Default</span>}
                           </div>
-                          <p className="text-xs text-dark-500 dark:text-dark-400">
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400">
                             {ws ? `Workspace: ${ws.name}` : 'Unknown workspace'}
                           </p>
                         </div>
@@ -889,13 +889,13 @@ export default function Settings() {
       <div className="card">
         <SectionHeader
           icon={Sun}
-          iconBg="bg-primary-100 dark:bg-primary-900/30"
-          iconColor="text-primary-600 dark:text-primary-400"
+          iconBg="bg-secondary-100 dark:bg-secondary-900/30"
+          iconColor="text-secondary-600 dark:text-secondary-400"
           title="Appearance"
           subtitle="Customize how MDL.cc looks on your device"
         />
         <div className="p-6">
-          <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-3">
+          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">
             Theme
           </label>
           <div className="grid grid-cols-3 gap-3">
@@ -906,23 +906,23 @@ export default function Settings() {
                 className={clsx(
                   'flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all',
                   selectedTheme === option.value
-                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                    : 'border-dark-200 dark:border-dark-700 hover:border-dark-300 dark:hover:border-dark-600'
+                    ? 'border-secondary-500 bg-secondary-50 dark:bg-secondary-900/20'
+                    : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
                 )}
               >
                 <option.icon
-                  className={clsx('w-6 h-6', selectedTheme === option.value ? 'text-primary-500' : 'text-dark-400')}
+                  className={clsx('w-6 h-6', selectedTheme === option.value ? 'text-secondary-500' : 'text-neutral-400')}
                 />
                 <span className={clsx(
                   'text-sm font-medium',
-                  selectedTheme === option.value ? 'text-primary-600 dark:text-primary-400' : 'text-dark-600 dark:text-dark-400'
+                  selectedTheme === option.value ? 'text-secondary-600 dark:text-secondary-400' : 'text-neutral-600 dark:text-neutral-400'
                 )}>
                   {option.label}
                 </span>
               </button>
             ))}
           </div>
-          <p className="text-sm text-dark-500 dark:text-dark-400 mt-3">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-3">
             {selectedTheme === 'system'
               ? 'MDL.cc will automatically match your system preference.'
               : `MDL.cc is set to ${selectedTheme} mode.`}
@@ -940,12 +940,12 @@ export default function Settings() {
           subtitle="Integrate MDL.cc with your applications"
         />
         <div className="p-6 space-y-4">
-          <div className="p-4 bg-dark-50 dark:bg-dark-800 rounded-xl">
-            <p className="text-sm text-dark-500 dark:text-dark-400 mb-2">API Endpoint</p>
-            <code className="text-sm font-mono text-dark-900 dark:text-white">https://mdl.cc/api</code>
+          <div className="p-4 bg-neutral-50 dark:bg-neutral-800 rounded-xl">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-2">API Endpoint</p>
+            <code className="text-sm font-mono text-neutral-900 dark:text-white">https://mdl.cc/api</code>
           </div>
           <div>
-            <p className="text-sm text-dark-600 dark:text-dark-300 mb-3">
+            <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-3">
               Use our REST API to create and manage links programmatically.
             </p>
             <button className="btn btn-secondary">
@@ -968,15 +968,15 @@ export default function Settings() {
         <div className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-dark-500 dark:text-dark-400">Version</p>
-              <p className="font-medium text-dark-900 dark:text-white">1.0.0</p>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">Version</p>
+              <p className="font-medium text-neutral-900 dark:text-white">1.0.0</p>
             </div>
             <div>
-              <p className="text-sm text-dark-500 dark:text-dark-400">Platform</p>
-              <p className="font-medium text-dark-900 dark:text-white">Cloudflare Workers</p>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">Platform</p>
+              <p className="font-medium text-neutral-900 dark:text-white">Cloudflare Workers</p>
             </div>
           </div>
-          <div className="pt-4 border-t border-dark-100 dark:border-dark-700">
+          <div className="pt-4 border-t border-neutral-100 dark:border-neutral-700">
             <div className="flex flex-wrap gap-3">
               <a href="#" className="btn btn-secondary btn-sm">
                 Privacy Policy <ExternalLink className="w-3 h-3" />

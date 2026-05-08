@@ -119,8 +119,8 @@ export default function Links() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-dark-900 dark:text-white">Links</h1>
-          <p className="text-dark-500 dark:text-dark-400 mt-1">
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Links</h1>
+          <p className="text-neutral-500 dark:text-neutral-400 mt-1">
             Manage all your shortened links
           </p>
         </div>
@@ -135,7 +135,7 @@ export default function Links() {
         {/* Search */}
         <form onSubmit={handleSearch} className="flex-1">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
             <input
               type="text"
               value={search}
@@ -148,7 +148,7 @@ export default function Links() {
 
         {/* Group Filter */}
         <div className="flex items-center gap-2">
-          <Filter className="w-5 h-5 text-dark-400" />
+          <Filter className="w-5 h-5 text-neutral-400" />
           <select
             value={selectedGroup}
             onChange={(e) => handleGroupFilter(e.target.value)}
@@ -168,14 +168,14 @@ export default function Links() {
       <div className="card overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-secondary-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : data?.links && data.links.length > 0 ? (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="text-left text-sm text-dark-500 dark:text-dark-400 border-b border-dark-100 dark:border-dark-700 bg-dark-50 dark:bg-dark-800/50">
+                  <tr className="text-left text-sm text-neutral-500 dark:text-neutral-400 border-b border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50">
                     <th className="p-4 font-medium">Short Link</th>
                     <th className="p-4 font-medium">Original URL</th>
                     <th className="p-4 font-medium">Group</th>
@@ -184,46 +184,46 @@ export default function Links() {
                     <th className="p-4 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-dark-100 dark:divide-dark-700">
+                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
                   {data.links.map((link) => (
-                    <tr key={link.id} className="hover:bg-dark-50 dark:hover:bg-dark-800/50">
+                    <tr key={link.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <Link
                             to={`/links/${link.id}`}
-                            className="font-medium text-primary-500 hover:text-primary-600"
+                            className="font-medium text-secondary-500 hover:text-secondary-600"
                           >
                             {shortLinkDisplay(link)}
                           </Link>
                           <button
                             onClick={() => copyLink(link)}
-                            className="p-1 rounded hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
+                            className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
                             title="Copy link"
                           >
                             {copiedId === link.id ? (
                               <Check className="w-4 h-4 text-green-500" />
                             ) : (
-                              <Copy className="w-4 h-4 text-dark-400" />
+                              <Copy className="w-4 h-4 text-neutral-400" />
                             )}
                           </button>
                           <a
                             href={shortLinkHref(link)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1 rounded hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
+                            className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
                             title="Open link"
                           >
-                            <ExternalLink className="w-4 h-4 text-dark-400" />
+                            <ExternalLink className="w-4 h-4 text-neutral-400" />
                           </a>
                         </div>
                         {link.title && (
-                          <p className="text-sm text-dark-600 dark:text-dark-400 mt-1">
+                          <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
                             {link.title}
                           </p>
                         )}
                       </td>
                       <td className="p-4">
-                        <p className="text-sm text-dark-600 dark:text-dark-300 truncate max-w-xs">
+                        <p className="text-sm text-neutral-600 dark:text-neutral-300 truncate max-w-xs">
                           {link.original_url}
                         </p>
                       </td>
@@ -239,16 +239,16 @@ export default function Links() {
                             {link.group_name}
                           </span>
                         ) : (
-                          <span className="text-dark-400 text-sm">-</span>
+                          <span className="text-neutral-400 text-sm">-</span>
                         )}
                       </td>
                       <td className="p-4 text-right">
-                        <span className="font-medium text-dark-900 dark:text-white">
+                        <span className="font-medium text-neutral-900 dark:text-white">
                           {link.click_count?.toLocaleString() || 0}
                         </span>
                       </td>
                       <td className="p-4">
-                        <span className="text-sm text-dark-500 dark:text-dark-400">
+                        <span className="text-sm text-neutral-500 dark:text-neutral-400">
                           {format(parseISO(link.created_at), 'MMM d, yyyy')}
                         </span>
                       </td>
@@ -256,26 +256,26 @@ export default function Links() {
                         <div className="flex items-center justify-end gap-1">
                           <Link
                             to={`/links/${link.id}`}
-                            className="p-2 rounded hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
+                            className="p-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
                             title="View analytics"
                           >
-                            <BarChart3 className="w-4 h-4 text-dark-500" />
+                            <BarChart3 className="w-4 h-4 text-neutral-500" />
                           </Link>
                           <a
                             href={`/api/qr?code=${link.short_code}&size=200`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 rounded hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
+                            className="p-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
                             title="Download QR"
                           >
-                            <QrCode className="w-4 h-4 text-dark-500" />
+                            <QrCode className="w-4 h-4 text-neutral-500" />
                           </a>
                           <button
                             ref={(el) => { menuButtonRefs.current[link.id] = el; }}
                             onClick={() => openMenu(link.id)}
-                            className="p-2 rounded hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
+                            className="p-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
                           >
-                            <MoreHorizontal className="w-4 h-4 text-dark-500" />
+                            <MoreHorizontal className="w-4 h-4 text-neutral-500" />
                           </button>
                         </div>
                       </td>
@@ -287,8 +287,8 @@ export default function Links() {
 
             {/* Pagination */}
             {data.pagination.pages > 1 && (
-              <div className="flex items-center justify-between p-4 border-t border-dark-100 dark:border-dark-700">
-                <p className="text-sm text-dark-500 dark:text-dark-400">
+              <div className="flex items-center justify-between p-4 border-t border-neutral-100 dark:border-neutral-700">
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   Showing {(page - 1) * 20 + 1} to {Math.min(page * 20, data.pagination.total)} of{' '}
                   {data.pagination.total} links
                 </p>
@@ -323,11 +323,11 @@ export default function Links() {
           </>
         ) : (
           <div className="flex flex-col items-center justify-center py-16">
-            <div className="w-16 h-16 rounded-full bg-dark-100 dark:bg-dark-800 flex items-center justify-center mb-4">
-              <Link2 className="w-8 h-8 text-dark-400" />
+            <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-4">
+              <Link2 className="w-8 h-8 text-neutral-400" />
             </div>
-            <h3 className="font-medium text-dark-900 dark:text-white mb-1">No links found</h3>
-            <p className="text-dark-500 dark:text-dark-400 mb-4">
+            <h3 className="font-medium text-neutral-900 dark:text-white mb-1">No links found</h3>
+            <p className="text-neutral-500 dark:text-neutral-400 mb-4">
               {search ? 'Try a different search term' : 'Create your first link to get started'}
             </p>
             <button onClick={() => setCreateModalOpen(true)} className="btn btn-primary">
@@ -355,7 +355,7 @@ export default function Links() {
           >
             <Link
               to={`/links/${activeMenu}`}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-700"
+              className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700"
               onClick={() => setActiveMenu(null)}
             >
               <Edit className="w-4 h-4" />
@@ -363,7 +363,7 @@ export default function Links() {
             </Link>
             <button
               onClick={() => deleteLink(activeMenu)}
-              className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-dark-100 dark:hover:bg-dark-700"
+              className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-neutral-100 dark:hover:bg-neutral-700"
             >
               <Trash2 className="w-4 h-4" />
               Delete

@@ -66,12 +66,12 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: theme === 'dark' ? '#181e25' : '#ffffff' }}>
+    <div className="min-h-screen" style={{ background: theme === 'dark' ? '#0c1830' : '#ffffff' }}>
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 lg:hidden"
-          style={{ background: 'rgba(24,30,37,0.4)', backdropFilter: 'blur(4px)' }}
+          style={{ background: 'rgba(12,24,48,0.4)', backdropFilter: 'blur(4px)' }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -84,27 +84,30 @@ export default function Layout() {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
         style={{
-          background: theme === 'dark' ? '#181e25' : '#ffffff',
-          borderRight: theme === 'dark' ? '1px solid #2d3748' : '1px solid #f2f3f5',
+          background: theme === 'dark' ? '#0c1830' : '#ffffff',
+          borderRight: theme === 'dark' ? '1px solid #1e2f47' : '1px solid #f0f2f5',
         }}
       >
         {/* Logo */}
-        <div className="flex items-center justify-between h-16 px-5" style={{ borderBottom: theme === 'dark' ? '1px solid #2d3748' : '1px solid #f2f3f5' }}>
+        <div className="flex items-center justify-between h-16 px-5" style={{ borderBottom: theme === 'dark' ? '1px solid #1e2f47' : '1px solid #f0f2f5' }}>
           <NavLink to="/" className="flex items-center gap-2.5 select-none">
             <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: '#1456f0' }}
+              className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ring-accent"
+              style={{ background: 'linear-gradient(135deg, #0c1830 0%, #1c45cf 100%)' }}
             >
               <Link2 className="w-4 h-4 text-white" />
             </div>
             <div className="leading-none">
               <span
-                className="font-display font-semibold text-xl"
-                style={{ color: theme === 'dark' ? '#f0f0f0' : '#181e25' }}
+                className="font-display font-semibold text-xl tracking-tight"
+                style={{ color: theme === 'dark' ? '#f0f2f5' : '#0c1830' }}
               >
                 MDL
               </span>
-              <span style={{ color: '#1456f0', fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '1.25rem' }}>
+              <span
+                className="font-display font-semibold"
+                style={{ color: '#00c7f9', fontSize: '1.25rem', letterSpacing: '-0.01em' }}
+              >
                 .cc
               </span>
             </div>
@@ -119,12 +122,11 @@ export default function Layout() {
           </button>
         </div>
 
-        {/* Shorten button */}
+        {/* Shorten button — accent CTA */}
         <div className="px-4 py-4">
           <button
             onClick={() => setCreateModalOpen(true)}
-            className="btn btn-primary btn-pill w-full"
-            style={{ background: '#1456f0' }}
+            className="btn btn-accent btn-pill w-full"
           >
             <Plus className="w-4 h-4" />
             Shorten Link
@@ -137,20 +139,20 @@ export default function Layout() {
             <button
               onClick={() => setWsSwitcherOpen((v) => !v)}
               className="flex items-center gap-2 w-full px-3 py-2 rounded-xl transition-colors text-left"
-              style={{ background: theme === 'dark' ? '#1e2633' : '#f0f0f0' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#2d3748' : '#e5e7eb'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#1e2633' : '#f0f0f0'; }}
+              style={{ background: theme === 'dark' ? '#1e2f47' : '#f0f2f5' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#1e2f47' : '#e5e7eb'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#1e2f47' : '#f0f2f5'; }}
             >
               <div
                 className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
-                style={{ background: '#1456f0' }}
+                style={{ background: 'linear-gradient(135deg, #5b8ffe 0%, #00c7f9 100%)' }}
               >
                 <span className="text-white font-bold text-xs">
                   {activeWorkspace?.name?.[0]?.toUpperCase() ?? 'W'}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold truncate" style={{ color: theme === 'dark' ? '#f0f0f0' : '#181e25' }}>
+                <p className="text-xs font-semibold truncate" style={{ color: theme === 'dark' ? '#f0f2f5' : '#0c1830' }}>
                   {activeWorkspace?.name ?? 'Workspace'}
                 </p>
                 <p className="text-xs" style={{ color: '#8e8e93' }}>Workspace</p>
@@ -169,8 +171,8 @@ export default function Layout() {
               <div
                 className="absolute left-0 right-0 top-full mt-1 rounded-xl py-1 shadow-xl z-50"
                 style={{
-                  background: theme === 'dark' ? '#1e2633' : '#ffffff',
-                  border: theme === 'dark' ? '1px solid #2d3748' : '1px solid #e5e7eb',
+                  background: theme === 'dark' ? '#1e2f47' : '#ffffff',
+                  border: theme === 'dark' ? '1px solid #1e2f47' : '1px solid #e5e7eb',
                 }}
               >
                 {workspaces.map((ws) => (
@@ -178,12 +180,12 @@ export default function Layout() {
                     key={ws.id}
                     onClick={() => switchWorkspace(ws.id)}
                     className="flex items-center gap-2 w-full px-3 py-2 text-left transition-colors"
-                    onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#2d3748' : '#f0f0f0'; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#1e2f47' : '#f0f2f5'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   >
                     <div
                       className="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
-                      style={{ background: '#1456f0' }}
+                      style={{ background: 'linear-gradient(135deg, #5b8ffe 0%, #00c7f9 100%)' }}
                     >
                       <span className="text-white font-bold" style={{ fontSize: '10px' }}>
                         {ws.name[0].toUpperCase()}
@@ -191,23 +193,23 @@ export default function Layout() {
                     </div>
                     <span
                       className="text-xs font-medium flex-1 truncate"
-                      style={{ color: theme === 'dark' ? '#f0f0f0' : '#181e25' }}
+                      style={{ color: theme === 'dark' ? '#f0f2f5' : '#0c1830' }}
                     >
                       {ws.name}
                     </span>
                     {ws.id === activeWorkspace?.id && (
-                      <Check className="w-3.5 h-3.5 shrink-0" style={{ color: '#1456f0' }} />
+                      <Check className="w-3.5 h-3.5 shrink-0" style={{ color: '#5b8ffe' }} />
                     )}
                   </button>
                 ))}
                 <div
                   className="mx-3 my-1"
-                  style={{ borderTop: theme === 'dark' ? '1px solid #2d3748' : '1px solid #f2f3f5' }}
+                  style={{ borderTop: theme === 'dark' ? '1px solid #1e2f47' : '1px solid #f0f2f5' }}
                 />
                 <button
                   onClick={() => { setWsSwitcherOpen(false); setSidebarOpen(false); navigate('/settings'); }}
                   className="flex items-center gap-2 w-full px-3 py-2 text-left transition-colors"
-                  onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#2d3748' : '#f0f0f0'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#1e2f47' : '#f0f2f5'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <Settings className="w-3.5 h-3.5 shrink-0" style={{ color: '#8e8e93' }} />
@@ -237,25 +239,25 @@ export default function Layout() {
         {/* Bottom: user display + theme toggle */}
         <div
           className="p-4 space-y-3"
-          style={{ borderTop: theme === 'dark' ? '1px solid #2d3748' : '1px solid #f2f3f5' }}
+          style={{ borderTop: theme === 'dark' ? '1px solid #1e2f47' : '1px solid #f0f2f5' }}
         >
           {/* User display + logout */}
           <div className="flex items-center gap-1">
             <button
               onClick={() => { setSidebarOpen(false); navigate('/settings'); }}
               className="flex items-center gap-2 flex-1 px-3 py-2 rounded-xl transition-colors text-left"
-              onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#2d3748' : '#f0f0f0'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#1e2f47' : '#f0f2f5'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
               <div
                 className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-white font-bold text-xs"
-                style={{ background: '#6366f1' }}
+                style={{ background: 'linear-gradient(135deg, #5b8ffe 0%, #00c7f9 100%)' }}
               >
                 {displayName[0]?.toUpperCase() ?? 'U'}
               </div>
               <span
                 className="text-xs font-semibold truncate"
-                style={{ color: theme === 'dark' ? '#f0f0f0' : '#181e25' }}
+                style={{ color: theme === 'dark' ? '#f0f2f5' : '#0c1830' }}
               >
                 {displayName}
               </span>
@@ -265,7 +267,7 @@ export default function Layout() {
               title="Sign out"
               className="p-2 rounded-lg transition-colors shrink-0"
               style={{ color: '#8e8e93' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#2d3748' : '#f0f0f0'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#1e2f47' : '#f0f2f5'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
               <LogOut className="w-4 h-4" />
@@ -277,7 +279,7 @@ export default function Layout() {
             onClick={toggleTheme}
             className="flex items-center gap-2 w-full px-3 py-2 rounded-lg transition-colors"
             style={{ color: '#8e8e93' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#2d3748' : '#f0f0f0'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#1e2f47' : '#f0f2f5'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
           >
             {theme === 'dark' ? (
@@ -295,10 +297,10 @@ export default function Layout() {
         <header
           className="sticky top-0 z-30 h-16"
           style={{
-            background: theme === 'dark' ? 'rgba(24, 30, 37, 0.85)' : 'rgba(255, 255, 255, 0.85)',
+            background: theme === 'dark' ? 'rgba(12,24,48, 0.85)' : 'rgba(255, 255, 255, 0.85)',
             backdropFilter: 'blur(12px)',
             WebkitBackdropFilter: 'blur(12px)',
-            borderBottom: theme === 'dark' ? '1px solid #2d3748' : '1px solid #f2f3f5',
+            borderBottom: theme === 'dark' ? '1px solid #1e2f47' : '1px solid #f0f2f5',
           }}
         >
           <div className="flex items-center justify-between h-full px-5 gap-4">
@@ -323,8 +325,8 @@ export default function Layout() {
                   style={{
                     paddingRight: '100px',
                     borderRadius: '9999px',
-                    background: theme === 'dark' ? '#222831' : '#f8f9fa',
-                    border: theme === 'dark' ? '1.5px solid #334155' : '1.5px solid #e5e7eb',
+                    background: theme === 'dark' ? '#1e2f47' : '#f8f9fa',
+                    border: theme === 'dark' ? '1.5px solid #1e2f47' : '1.5px solid #e5e7eb',
                     fontSize: '13px',
                   }}
                   onKeyDown={(e) => {
@@ -333,13 +335,12 @@ export default function Layout() {
                 />
                 <button
                   onClick={() => { if (topBarUrl.trim()) setCreateModalOpen(true); }}
-                  className="btn btn-primary btn-pill btn-sm"
+                  className="btn btn-accent btn-pill btn-sm"
                   style={{
                     position: 'absolute',
                     right: '4px',
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    background: '#1456f0',
                     fontSize: '13px',
                     padding: '6px 16px',
                   }}
@@ -356,7 +357,7 @@ export default function Layout() {
                 className="p-2 rounded-xl transition-colors"
                 title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
                 style={{ color: '#8e8e93' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#2d3748' : '#f0f0f0'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = theme === 'dark' ? '#1e2f47' : '#f0f2f5'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4" />}
