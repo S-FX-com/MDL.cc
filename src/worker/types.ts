@@ -10,6 +10,12 @@ export interface Env {
   RESEND_API_KEY: string;
   JWT_SECRET: string;
   PBKDF2_SALT_PREFIX: string;
+  // Public origin for callback URLs (e.g. https://mdl.cc). Optional in dev.
+  APP_URL?: string;
+  // Microsoft 365 OAuth (Azure App Registration). Optional — if absent, the
+  // M365 sign-in endpoint returns 503 and the UI hides the button.
+  MS_CLIENT_ID?: string;
+  MS_CLIENT_SECRET?: string;
 }
 
 export interface Workspace {

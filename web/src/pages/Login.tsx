@@ -1,8 +1,9 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Link2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { getFeatures } from '../lib/features';
 
 export default function Login() {
   const { login } = useAuth();
@@ -17,6 +18,21 @@ export default function Login() {
   const [showPw, setShowPw]     = useState(false);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
+  const [msSso, setMsSso]       = useState(false);
+
+  useEffect(() => {
+    getFeatures().then(f => setMsSso(f.microsoft_sso));
+    // SSO redirect dropped an error onto the URL fragment — surface it.
+    if (window.location.hash.includes('error=')) {
+      const params = new URLSearchParams(window.location.hash.slice(1));
+      const e = params.get('error');
+      if (e) {
+        setError(decodeURIComponent(e));
+        const url = new URL(window.location.href); url.hash = '';
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -95,6 +111,36 @@ export default function Login() {
           >
             {error}
           </div>
+        )}
+
+        {msSso && (
+          <>
+            <a
+              href={`/api/auth/microsoft/start?next=${encodeURIComponent('/')}${workspaceSlug ? `&workspace=${encodeURIComponent(workspaceSlug)}` : ''}`}
+              className="btn w-full mb-4 flex items-center justify-center gap-2.5 font-medium"
+              style={{
+                background: isDark ? '#0c1830' : '#ffffff',
+                border: isDark ? '1.5px solid #1e2f47' : '1.5px solid #e5e7eb',
+                color: isDark ? '#f0f2f5' : '#0c1830',
+                padding: '10px 16px',
+                borderRadius: '12px',
+              }}
+            >
+              {/* Microsoft 4-square logo */}
+              <svg width="18" height="18" viewBox="0 0 21 21" aria-hidden>
+                <rect x="1"  y="1"  width="9" height="9" fill="#f25022" />
+                <rect x="11" y="1"  width="9" height="9" fill="#7fba00" />
+                <rect x="1"  y="11" width="9" height="9" fill="#00a4ef" />
+                <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+              </svg>
+              Continue with Microsoft
+            </a>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-px" style={{ background: isDark ? '#1e2f47' : '#e5e7eb' }} />
+              <span className="text-xs" style={{ color: '#8e8e93' }}>or</span>
+              <div className="flex-1 h-px" style={{ background: isDark ? '#1e2f47' : '#e5e7eb' }} />
+            </div>
+          </>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">

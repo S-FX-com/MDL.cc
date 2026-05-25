@@ -9,6 +9,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { useAuth } from '../contexts/AuthContext';
 import type { TeamMember, CustomDomain } from '../contexts/WorkspaceContext';
+import EmailDomainsCard from '../components/EmailDomainsCard';
 import clsx from 'clsx';
 
 type ThemeOption = 'light' | 'dark' | 'system';
@@ -550,6 +551,13 @@ export default function Settings() {
           )}
         </div>
       </div>
+
+      {/* ── 3b. Email domains (Microsoft auto-join) ─────────────────────────── */}
+      <EmailDomainsCard
+        workspaceId={activeWorkspaceId}
+        workspaceName={workspaces.find(w => w.id === activeWorkspaceId)?.name || 'this workspace'}
+        hasAgency={hasAgency}
+      />
 
       {/* ── 4. Team Members ─────────────────────────────────────────────────── */}
       <div className={clsx('card', !hasAgency && 'opacity-60 pointer-events-none select-none')}>

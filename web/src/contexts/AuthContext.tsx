@@ -30,6 +30,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [loading, setLoading] = useState(true);
 
+  // Al montar, capturar token de un callback SSO (#token=...) si viene en la URL.
+  // Esto deja al provider en estado autenticado inmediatamente sin re-render extra.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!window.location.hash.includes('token=')) return;
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const ssoToken = params.get('token');
+    if (ssoToken) {
+      localStorage.setItem(TOKEN_KEY, ssoToken);
+      setToken(ssoToken);
+      // Limpiar el fragment para que un refresh no re-procese el token.
+      const url = new URL(window.location.href);
+      url.hash = '';
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, []);
+
   // Al montar, verificar token guardado
   useEffect(() => {
     const savedToken = localStorage.getItem(TOKEN_KEY);

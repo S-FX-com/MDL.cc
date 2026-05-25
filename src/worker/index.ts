@@ -28,6 +28,7 @@ import {
 import { generateQR, saveQRConfig } from './handlers/qr';
 import { sendInviteEmail, validateInvite, acceptInvite, getWorkspaceInvitations, cancelInvitation } from './handlers/email';
 import { register, login, getMe, updateProfile } from './handlers/auth';
+import { microsoftStart, microsoftCallback } from './handlers/microsoft';
 import {
   getWorkspaces,
   createWorkspace,
@@ -38,6 +39,12 @@ import {
   updateMemberRole,
   lookupWorkspace,
 } from './handlers/workspaces';
+import {
+  listWorkspaceDomains,
+  addWorkspaceDomain,
+  updateWorkspaceDomain,
+  removeWorkspaceDomain,
+} from './handlers/workspaceDomains';
 import { errorResponse, jsonResponse } from './utils';
 
 export default {
@@ -65,13 +72,18 @@ export default {
     try {
       // ============ API Routes ============
 
-      // Health check
+      // Health check + feature flags consumed by the web client (SSO buttons,
+      // domain auto-join UI). Kept on /api/health so the web app only needs
+      // one bootstrap request.
       if (path === '/api/health') {
         return jsonResponse({
           status: 'healthy',
           app: env.APP_NAME,
           tagline: env.APP_TAGLINE,
           environment: env.ENVIRONMENT,
+          features: {
+            microsoft_sso: Boolean(env.MS_CLIENT_ID && env.MS_CLIENT_SECRET),
+          },
         });
       }
 
@@ -136,6 +148,8 @@ export default {
       if (path === '/api/auth/login'    && method === 'POST') return login(request, env);
       if (path === '/api/auth/me'       && method === 'GET')  return getMe(request, env);
       if (path === '/api/auth/me'       && method === 'PUT')  return updateProfile(request, env);
+      if (path === '/api/auth/microsoft/start'    && method === 'GET') return microsoftStart(request, env);
+      if (path === '/api/auth/microsoft/callback' && method === 'GET') return microsoftCallback(request, env);
 
       // ============ Workspace Routes ============
       if (path === '/api/workspaces/lookup' && method === 'GET') return lookupWorkspace(request, env);
@@ -158,6 +172,17 @@ export default {
       if (wsMemberMatch) {
         if (method === 'DELETE') return removeWorkspaceMember(wsMemberMatch[1], wsMemberMatch[2], request, env);
         if (method === 'PATCH')  return updateMemberRole(wsMemberMatch[1], wsMemberMatch[2], request, env);
+      }
+
+      const wsDomainsMatch = path.match(/^\/api\/workspaces\/([^/]+)\/email-domains$/);
+      if (wsDomainsMatch) {
+        if (method === 'GET')  return listWorkspaceDomains(wsDomainsMatch[1], request, env);
+        if (method === 'POST') return addWorkspaceDomain(wsDomainsMatch[1], request, env);
+      }
+      const wsDomainItemMatch = path.match(/^\/api\/workspaces\/([^/]+)\/email-domains\/([^/]+)$/);
+      if (wsDomainItemMatch) {
+        if (method === 'PATCH')  return updateWorkspaceDomain(wsDomainItemMatch[1], wsDomainItemMatch[2], request, env);
+        if (method === 'DELETE') return removeWorkspaceDomain(wsDomainItemMatch[1], wsDomainItemMatch[2], request, env);
       }
 
       const wsInvitesMatch = path.match(/^\/api\/workspaces\/([^/]+)\/invitations$/);
