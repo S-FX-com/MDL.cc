@@ -57,24 +57,38 @@ async function resolveMeta(env: Env, inputs: PreviewInputs): Promise<PreviewMeta
     };
   }
 
+  const destHost = safeHost(inputs.destination);
+
   const fetched = await fetchDestinationOg(env, inputs.destination);
   if (fetched && (fetched.title || fetched.description)) {
     return {
-      title: fetched.title || siteName,
-      description: fetched.description || `Shared via ${siteName}`,
+      title: fetched.title || destHost || siteName,
+      description: fetched.description || `${destHost || 'Link'} — shared via ${siteName}`,
       destination: inputs.destination,
       canonical: inputs.shortUrl,
       siteName,
     };
   }
 
+  // Total fallback: site has no metadata, or the fetch failed transiently.
+  // Show the destination host so the preview at least says where it goes.
   return {
-    title: siteName,
-    description: `Shared via ${siteName} — the middle-point between you and your audience.`,
+    title: destHost ? `${destHost} — via ${siteName}` : siteName,
+    description: destHost
+      ? `Opens ${destHost}. Shared via ${siteName}.`
+      : `Shared via ${siteName} — the middle-point between you and your audience.`,
     destination: inputs.destination,
     canonical: inputs.shortUrl,
     siteName,
   };
+}
+
+function safeHost(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
 }
 
 // ── Destination OG scraping (cached) ────────────────────────────────────────
@@ -85,24 +99,29 @@ interface FetchedOg {
 }
 
 async function fetchDestinationOg(env: Env, destination: string): Promise<FetchedOg | null> {
-  const cacheKey = `og:${await hashUrl(destination)}`;
+  // Cache key prefix bumped to og2: to invalidate the old, over-aggressive miss cache.
+  const cacheKey = `og2:${await hashUrl(destination)}`;
   const cached = await env.URL_KV.get<FetchedOg>(cacheKey, 'json');
   if (cached) return cached;
 
   const result = await scrapeOg(destination);
-  // Cache both hits and misses — a miss is still a real answer worth remembering.
-  // Misses get a shorter TTL so a destination that adds OG tags later is picked up.
-  const ttl = result ? 86400 : 3600;
-  await env.URL_KV.put(cacheKey, JSON.stringify(result ?? { title: null, description: null }), {
-    expirationTtl: ttl,
-  });
+
+  // Cache policy:
+  //   - Successful scrape (anything came back, even just a <title>): 24h
+  //   - Fetch failed entirely (null): do NOT cache — likely transient (timeout,
+  //     5xx, network). Retry on the next request.
+  // A site that genuinely has no metadata still returns a non-null result with
+  // null fields; that gets cached as a real answer.
+  if (result !== null) {
+    await env.URL_KV.put(cacheKey, JSON.stringify(result), { expirationTtl: 86400 });
+  }
   return result;
 }
 
 async function scrapeOg(url: string): Promise<FetchedOg | null> {
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 2000);
+    const timer = setTimeout(() => controller.abort(), 4000);
     const res = await fetch(url, {
       method: 'GET',
       redirect: 'follow',
