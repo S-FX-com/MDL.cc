@@ -180,4 +180,9 @@ export interface KVLinkData {
   expires_at?: string;
   is_active: boolean;
   link_id: string;
+  // Optional per-link overrides used when rendering the link preview HTML.
+  // Older cache entries written before preview support won't have these — the
+  // preview falls back to scraping the destination, so absence is harmless.
+  title?: string | null;
+  description?: string | null;
 }

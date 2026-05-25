@@ -11,6 +11,7 @@
 import { Env, KVLinkData } from '../types';
 import { generateId, parseUserAgent, hashIP, getToday } from '../utils';
 import { findDomainByHost } from './domains';
+import { buildPreviewResponse } from './preview';
 
 export async function handleRedirect(
   shortCode: string,
@@ -27,16 +28,16 @@ export async function handleRedirect(
     const gate = evaluate(kvData, request, shortCode);
     if (gate) return gate;
     (request as any).ctx?.waitUntil?.(trackClick(kvData.link_id, request, env));
-    return Response.redirect(kvData.url, 302);
+    return servePreview(env, request, kvData, workspaceId);
   }
 
   // 2. DB fallback — scoped to the workspace when branded, global on mdl.cc.
   const link = workspaceId
     ? await env.DB.prepare(
-        'SELECT id, original_url, password, expires_at, is_active FROM links WHERE short_code = ? AND workspace_id = ? LIMIT 1',
+        'SELECT id, original_url, password, expires_at, is_active, title, description FROM links WHERE short_code = ? AND workspace_id = ? LIMIT 1',
       ).bind(shortCode, workspaceId).first<DbLink>()
     : await env.DB.prepare(
-        'SELECT id, original_url, password, expires_at, is_active FROM links WHERE short_code = ? LIMIT 1',
+        'SELECT id, original_url, password, expires_at, is_active, title, description FROM links WHERE short_code = ? LIMIT 1',
       ).bind(shortCode).first<DbLink>();
 
   if (!link) return new Response('Link not found', { status: 404 });
@@ -47,6 +48,8 @@ export async function handleRedirect(
     expires_at: link.expires_at || undefined,
     is_active: !!link.is_active,
     link_id: link.id,
+    title: link.title,
+    description: link.description,
   };
 
   const gate = evaluate(kvFromDb, request, shortCode);
@@ -56,7 +59,39 @@ export async function handleRedirect(
   env.URL_KV.put(kvKey, JSON.stringify(kvFromDb), { expirationTtl: 86400 });
 
   (request as any).ctx?.waitUntil?.(trackClick(link.id, request, env));
-  return Response.redirect(link.original_url, 302);
+  return servePreview(env, request, kvFromDb, workspaceId);
+}
+
+// Serve the OG-tagged interstitial HTML. The redirect itself happens via
+// <meta refresh> + JS in the body (see preview.ts) so social unfurlers see
+// the metadata before any browser navigation.
+async function servePreview(
+  env: Env,
+  request: Request,
+  data: KVLinkData,
+  workspaceId: string | null,
+): Promise<Response> {
+  const url = new URL(request.url);
+  const shortUrl = `${url.protocol}//${url.host}${url.pathname}`;
+
+  let workspaceName: string | null = null;
+  if (workspaceId) {
+    try {
+      const ws = await env.DB.prepare('SELECT name FROM workspaces WHERE id = ? LIMIT 1')
+        .bind(workspaceId).first<{ name: string }>();
+      workspaceName = ws?.name ?? null;
+    } catch {
+      // Non-fatal — fall back to MDL.cc branding.
+    }
+  }
+
+  return buildPreviewResponse(env, {
+    destination: data.url,
+    shortUrl,
+    workspaceName,
+    linkTitle: data.title ?? null,
+    linkDescription: data.description ?? null,
+  });
 }
 
 // Resolve a request to either a default (mdl.cc) or branded redirect, or null if
@@ -91,6 +126,8 @@ interface DbLink {
   password: string | null;
   expires_at: string | null;
   is_active: number;
+  title: string | null;
+  description: string | null;
 }
 
 function evaluate(data: KVLinkData, request: Request, shortCode: string): Response | null {
