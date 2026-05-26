@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  Sun, Moon, Monitor, Globe, Key, Shield, Code, ExternalLink,
+  Sun, Moon, Monitor, Globe, Shield, ExternalLink,
   User, Building2, Users, Edit2, Check, X, Plus, Trash2,
   Copy, RefreshCw, ChevronDown, ChevronUp, AlertCircle, CheckCircle2,
   Loader2, Link2,
@@ -190,7 +190,7 @@ export default function Settings() {
     teamMembers, customDomains, inviteCode,
     setActiveWorkspaceId, createAgency,
     addWorkspace, renameWorkspace, deleteWorkspace,
-    inviteMemberByEmail, assignMemberWorkspace, removeMember,
+    inviteMemberByEmail, removeMember,
     addDomain, verifyDomain, removeDomain, setDefaultDomain, getDefaultDomain, regenerateInviteCode,
   } = useWorkspace();
 
@@ -715,35 +715,33 @@ export default function Settings() {
                   {expandedMember === member.id && (
                     <div className="p-3 border-t border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 space-y-3">
                       <p className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
-                        Workspace access:
+                        {member.status === 'active' ? 'Member of:' : 'Invited to:'}
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {workspaces.map((ws) => {
-                          const hasAccess = member.workspaceIds.includes(ws.id);
-                          return (
-                            <button
+                        {workspaces
+                          .filter(ws => member.workspaceIds.includes(ws.id))
+                          .map((ws) => (
+                            <span
                               key={ws.id}
-                              onClick={() => assignMemberWorkspace(member.id, ws.id, !hasAccess)}
-                              className={clsx(
-                                'px-3 py-1 rounded-full text-xs font-medium border transition-all',
-                                hasAccess
-                                  ? 'border-secondary-500 bg-secondary-50 dark:bg-secondary-900/20 text-secondary-700 dark:text-secondary-300'
-                                  : 'border-neutral-200 dark:border-neutral-600 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300'
-                              )}
+                              className="px-3 py-1 rounded-full text-xs font-medium border border-secondary-500 bg-secondary-50 dark:bg-secondary-900/20 text-secondary-700 dark:text-secondary-300"
                             >
-                              {hasAccess && <Check className="w-3 h-3 inline mr-1" />}
+                              <Check className="w-3 h-3 inline mr-1" />
                               {ws.name}
-                            </button>
-                          );
-                        })}
+                            </span>
+                          ))}
                       </div>
-                      <button
-                        onClick={() => { if (confirm(`Remove ${member.email}?`)) removeMember(member.id); }}
-                        className="btn btn-danger btn-xs gap-1"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        Remove member
-                      </button>
+                      {member.role !== 'owner' && (
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Remove ${member.email}?`)) return;
+                            try { await removeMember(member); } catch { /* surfaced upstream */ }
+                          }}
+                          className="btn btn-danger btn-xs gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          {member.status === 'active' ? 'Remove member' : 'Cancel invitation'}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -938,32 +936,6 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* ── API Access ───────────────────────────────────────────────────────── */}
-      <div className="card">
-        <SectionHeader
-          icon={Key}
-          iconBg="bg-purple-100 dark:bg-purple-900/30"
-          iconColor="text-purple-600 dark:text-purple-400"
-          title="API Access"
-          subtitle="Integrate MDL.cc with your applications"
-        />
-        <div className="p-6 space-y-4">
-          <div className="p-4 bg-neutral-50 dark:bg-neutral-800 rounded-xl">
-            <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-2">API Endpoint</p>
-            <code className="text-sm font-mono text-neutral-900 dark:text-white">https://mdl.cc/api</code>
-          </div>
-          <div>
-            <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-3">
-              Use our REST API to create and manage links programmatically.
-            </p>
-            <button className="btn btn-secondary">
-              <Code className="w-4 h-4" />
-              View API Documentation
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* ── About ────────────────────────────────────────────────────────────── */}
       <div className="card">
         <SectionHeader
@@ -977,7 +949,7 @@ export default function Settings() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">Version</p>
-              <p className="font-medium text-neutral-900 dark:text-white">1.0.0</p>
+              <p className="font-medium text-neutral-900 dark:text-white font-mono">{__APP_VERSION__}</p>
             </div>
             <div>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">Platform</p>
