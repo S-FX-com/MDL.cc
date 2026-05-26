@@ -8,7 +8,11 @@ export interface Workspace {
   id: string;
   name: string;
   slug?: string;
+  // Display role used by the UI ('Admin' for owner/admin, 'Member' otherwise).
   role: string;
+  // Raw role from the server — needed for permission checks (e.g. only
+  // owner/admin can add or remove other members in a workspace).
+  rawRole?: 'owner' | 'admin' | 'member';
 }
 
 export interface TeamMember {
@@ -71,6 +75,8 @@ interface WorkspaceContextType {
   renameWorkspace: (id: string, name: string) => Promise<void>;
   deleteWorkspace: (id: string) => Promise<void>;
   inviteMemberByEmail: (email: string, workspaceIds: string[], role?: 'member' | 'admin') => Promise<void>;
+  addMemberToWorkspace: (email: string, workspaceId: string, role?: 'member' | 'admin') => Promise<void>;
+  removeMemberFromWorkspace: (member: TeamMember, workspaceId: string) => Promise<void>;
   removeMember: (member: TeamMember) => Promise<void>;
   reloadTeamMembers: () => Promise<void>;
   addDomain: (domain: string, workspaceId: string) => Promise<CustomDomain>;
@@ -162,11 +168,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     try {
       setLoadingWorkspaces(true);
       const res = await authFetch('/api/workspaces');
-      const data = await res.json() as { success: boolean; data?: Workspace[] };
+      const data = await res.json() as { success: boolean; data?: Array<Workspace & { role: 'owner' | 'admin' | 'member' }> };
       if (data.success && data.data) {
-        const ws = data.data.map(w => ({
+        const ws: Workspace[] = data.data.map(w => ({
           ...w,
-          role: (w.role === 'owner' ? 'Admin' : 'Member') as string,
+          rawRole: w.role,
+          role: w.role === 'owner' || w.role === 'admin' ? 'Admin' : 'Member',
         }));
         setWorkspaces(ws);
         // Activar primer workspace si no hay uno activo o el activo ya no existe
@@ -240,7 +247,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const data = await res.json() as { success: boolean; data?: Workspace; error?: string };
     if (!data.success || !data.data) throw new Error(data.error || 'Error creando workspace');
 
-    const ws: Workspace = { ...data.data, role: 'Admin' };
+    const ws: Workspace = { ...data.data, role: 'Admin', rawRole: 'owner' };
     setWorkspaces(prev => [...prev, ws]);
     setHasAgency(true);
     save(S.hasAgency, true);
@@ -376,6 +383,30 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     await reloadTeamMembers();
   }, [workspaces, reloadTeamMembers]);
 
+  const addMemberToWorkspace = useCallback(async (
+    email: string, workspaceId: string, role: 'member' | 'admin' = 'member',
+  ) => {
+    const res = await authFetch(`/api/workspaces/${workspaceId}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ email, role }),
+    });
+    const data = await res.json() as { success: boolean; error?: string };
+    if (!data.success) throw new Error(data.error || 'Could not add member');
+    await reloadTeamMembers();
+  }, [reloadTeamMembers]);
+
+  const removeMemberFromWorkspace = useCallback(async (member: TeamMember, workspaceId: string) => {
+    const memberRowId = member.membershipsByWorkspace?.[workspaceId];
+    if (!memberRowId) return;
+    const res = await authFetch(
+      `/api/workspaces/${workspaceId}/members/${memberRowId}`,
+      { method: 'DELETE' },
+    );
+    const data = await res.json() as { success: boolean; error?: string };
+    if (!data.success) throw new Error(data.error || 'Could not remove member');
+    await reloadTeamMembers();
+  }, [reloadTeamMembers]);
+
   const removeMember = useCallback(async (member: TeamMember) => {
     if (member.status === 'active' && member.membershipsByWorkspace) {
       await Promise.all(Object.entries(member.membershipsByWorkspace).map(([wsId, memberId]) =>
@@ -460,6 +491,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       renameWorkspace,
       deleteWorkspace,
       inviteMemberByEmail,
+      addMemberToWorkspace,
+      removeMemberFromWorkspace,
       removeMember,
       reloadTeamMembers,
       addDomain,

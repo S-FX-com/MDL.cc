@@ -190,9 +190,36 @@ export default function Settings() {
     teamMembers, customDomains, inviteCode,
     setActiveWorkspaceId, createAgency,
     addWorkspace, renameWorkspace, deleteWorkspace,
-    inviteMemberByEmail, removeMember,
+    inviteMemberByEmail, addMemberToWorkspace, removeMemberFromWorkspace, removeMember,
     addDomain, verifyDomain, removeDomain, setDefaultDomain, getDefaultDomain, regenerateInviteCode,
   } = useWorkspace();
+
+  // Per-member assignment toggle state (workspace pill we're currently
+  // adding/removing). Used to dim the pill + suppress double-clicks.
+  const [toggleBusy, setToggleBusy] = useState<string | null>(null);
+  const [memberError, setMemberError] = useState<string | null>(null);
+
+  const handleToggleWorkspace = async (member: TeamMember, ws: { id: string; rawRole?: string }) => {
+    if (!ws.rawRole || !['owner', 'admin'].includes(ws.rawRole)) return;
+    if (member.status !== 'active') return;
+    if (member.role === 'owner' && member.workspaceIds.includes(ws.id)) return;
+
+    const key = `${member.id}:${ws.id}`;
+    setToggleBusy(key);
+    setMemberError(null);
+    try {
+      if (member.workspaceIds.includes(ws.id)) {
+        await removeMemberFromWorkspace(member, ws.id);
+      } else {
+        await addMemberToWorkspace(member.email, ws.id, member.role === 'admin' ? 'admin' : 'member');
+      }
+    } catch (e) {
+      setMemberError(e instanceof Error ? e.message : 'Could not update membership');
+      setTimeout(() => setMemberError(null), 4000);
+    } finally {
+      setToggleBusy(null);
+    }
+  };
 
   // ── Theme ──────────────────────────────────────────────────────────────────
   const [selectedTheme, setSelectedTheme] = useState<ThemeOption>(
@@ -715,21 +742,55 @@ export default function Settings() {
                   {expandedMember === member.id && (
                     <div className="p-3 border-t border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 space-y-3">
                       <p className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
-                        {member.status === 'active' ? 'Member of:' : 'Invited to:'}
+                        {member.status === 'active' ? 'Workspace access:' : 'Invited to:'}
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {workspaces
-                          .filter(ws => member.workspaceIds.includes(ws.id))
-                          .map((ws) => (
-                            <span
-                              key={ws.id}
-                              className="px-3 py-1 rounded-full text-xs font-medium border border-secondary-500 bg-secondary-50 dark:bg-secondary-900/20 text-secondary-700 dark:text-secondary-300"
-                            >
-                              <Check className="w-3 h-3 inline mr-1" />
-                              {ws.name}
-                            </span>
-                          ))}
+                        {member.status === 'active'
+                          ? workspaces.map((ws) => {
+                              const has = member.workspaceIds.includes(ws.id);
+                              const canManage = ws.rawRole === 'owner' || ws.rawRole === 'admin';
+                              const isOwnerHere = has && member.role === 'owner';
+                              const disabled = !canManage || isOwnerHere || toggleBusy === `${member.id}:${ws.id}`;
+                              return (
+                                <button
+                                  key={ws.id}
+                                  onClick={() => handleToggleWorkspace(member, ws)}
+                                  disabled={disabled}
+                                  title={
+                                    isOwnerHere ? 'Workspace owner — cannot be removed here'
+                                    : !canManage ? 'You need owner/admin in this workspace to manage members'
+                                    : has ? 'Remove from this workspace'
+                                    : 'Add to this workspace'
+                                  }
+                                  className={clsx(
+                                    'px-3 py-1 rounded-full text-xs font-medium border transition-all',
+                                    has
+                                      ? 'border-secondary-500 bg-secondary-50 dark:bg-secondary-900/20 text-secondary-700 dark:text-secondary-300'
+                                      : 'border-neutral-200 dark:border-neutral-600 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300',
+                                    disabled && 'opacity-60 cursor-not-allowed',
+                                  )}
+                                >
+                                  {has && <Check className="w-3 h-3 inline mr-1" />}
+                                  {ws.name}
+                                  {isOwnerHere && <span className="ml-1 text-[10px] uppercase tracking-wider">owner</span>}
+                                </button>
+                              );
+                            })
+                          : workspaces
+                              .filter(ws => member.workspaceIds.includes(ws.id))
+                              .map((ws) => (
+                                <span
+                                  key={ws.id}
+                                  className="px-3 py-1 rounded-full text-xs font-medium border border-secondary-500 bg-secondary-50 dark:bg-secondary-900/20 text-secondary-700 dark:text-secondary-300"
+                                >
+                                  <Check className="w-3 h-3 inline mr-1" />
+                                  {ws.name}
+                                </span>
+                              ))}
                       </div>
+                      {memberError && expandedMember === member.id && (
+                        <p className="text-xs text-red-400">{memberError}</p>
+                      )}
                       {member.role !== 'owner' && (
                         <button
                           onClick={async () => {
@@ -739,7 +800,7 @@ export default function Settings() {
                           className="btn btn-danger btn-xs gap-1"
                         >
                           <Trash2 className="w-3 h-3" />
-                          {member.status === 'active' ? 'Remove member' : 'Cancel invitation'}
+                          {member.status === 'active' ? 'Remove from all workspaces' : 'Cancel invitation'}
                         </button>
                       )}
                     </div>
