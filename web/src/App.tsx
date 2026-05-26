@@ -8,7 +8,6 @@ import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
 import Invitations from './pages/Invitations';
 import Login from './pages/Login';
-import Register from './pages/Register';
 import WorkspaceEntry from './pages/WorkspaceEntry';
 import Join from './pages/Join';
 import { useAuth } from './contexts/AuthContext';
@@ -38,10 +37,10 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <Routes>
-      {/* Public auth flow: workspace → login → register */}
+      {/* Public auth flow: workspace → login. Sign-up is invite-only via /join. */}
       <Route path="/workspace" element={<PublicRoute><WorkspaceEntry /></PublicRoute>} />
       <Route path="/login"     element={<PublicRoute><Login /></PublicRoute>} />
-      <Route path="/register"  element={<PublicRoute><Register /></PublicRoute>} />
+      <Route path="/register"  element={<Navigate to="/login" replace />} />
       {/* Invite acceptance — accessible logged in or out */}
       <Route path="/join" element={<Join />} />
 
