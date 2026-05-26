@@ -12,6 +12,8 @@ export interface Workspace {
 }
 
 export interface TeamMember {
+  // Stable per-row id: workspace_member.id for active rows,
+  // invitation.id for pending rows.
   id: string;
   email: string;
   name?: string;
@@ -19,7 +21,13 @@ export interface TeamMember {
   workspaceIds: string[];
   status: 'pending' | 'active';
   invitedAt: string;
-  role?: 'member' | 'admin';
+  role?: 'member' | 'admin' | 'owner';
+  // For pending rows we need (workspace_id, invitation_id) to cancel.
+  // For active rows we need (workspace_id, member_id) to remove. We carry
+  // the source workspace alongside the row id; for users active in multiple
+  // workspaces we merge into one row and keep the membership map for the UI.
+  membershipsByWorkspace?: Record<string, string>; // workspace_id -> workspace_members.id
+  pendingInvites?: Array<{ workspace_id: string; invitation_id: string }>;
 }
 
 export interface CustomDomain {
@@ -63,8 +71,8 @@ interface WorkspaceContextType {
   renameWorkspace: (id: string, name: string) => Promise<void>;
   deleteWorkspace: (id: string) => Promise<void>;
   inviteMemberByEmail: (email: string, workspaceIds: string[], role?: 'member' | 'admin') => Promise<void>;
-  assignMemberWorkspace: (memberId: string, workspaceId: string, assign: boolean) => void;
-  removeMember: (memberId: string) => void;
+  removeMember: (member: TeamMember) => Promise<void>;
+  reloadTeamMembers: () => Promise<void>;
   addDomain: (domain: string, workspaceId: string) => Promise<CustomDomain>;
   verifyDomain: (id: string) => Promise<boolean>;
   removeDomain: (id: string) => Promise<void>;
@@ -81,14 +89,13 @@ interface WorkspaceContextType {
 const S = {
   activeWsId:       'mdl-active-workspace',
   hasAgency:        'mdl-has-agency',
-  teamMembers:      'mdl-team-members',
   inviteCode:       'mdl-invite-code',
   linkWorkspaces:   'mdl-link-workspaces',
 };
 
-// Stale keys from earlier versions that kept domains + default-ids client-side.
-// We clear them on mount so old data can't shadow API-sourced state.
-const LEGACY_KEYS = ['mdl-custom-domains', 'mdl-default-domain-ids'];
+// Stale keys from earlier versions that kept rows client-side. They're
+// purged on mount so old data can't shadow API-sourced state.
+const LEGACY_KEYS = ['mdl-custom-domains', 'mdl-default-domain-ids', 'mdl-team-members'];
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -131,7 +138,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [workspaces, setWorkspaces]       = useState<Workspace[]>([]);
   const [activeWsId, setActiveWsId]       = useState(() => load<string>(S.activeWsId, ''));
   const [hasAgency, setHasAgency]         = useState(() => load<boolean>(S.hasAgency, false));
-  const [teamMembers, setTeamMembers]     = useState<TeamMember[]>(() => load(S.teamMembers, []));
+  const [teamMembers, setTeamMembers]     = useState<TeamMember[]>([]);
   const [customDomains, setCustomDomains] = useState<CustomDomain[]>([]);
   const [linkWorkspaces, setLinkWorkspaces] = useState<Record<string, string>>(() => load(S.linkWorkspaces, {}));
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(true);
@@ -209,7 +216,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // One-time cleanup: purge localStorage domain state that predates the API.
+    // One-time cleanup: purge localStorage state that predates the API.
     LEGACY_KEYS.forEach(k => localStorage.removeItem(k));
     reloadWorkspaces();
     reloadDomains();
@@ -261,47 +268,132 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }, [workspaces, activeWsId, setActiveWorkspaceId]);
 
+  // ── Team members (server-authoritative) ─────────────────────────────────
+  //
+  // Each visible row is one person. For every workspace the current user
+  // belongs to we fetch:
+  //   - GET /api/workspaces/:id/members      (active memberships)
+  //   - GET /api/workspaces/:id/invitations  (pending invitations)
+  // and merge them by lower-cased email. Domain auto-join rows show up
+  // here because they're real rows in workspace_members. Pending rows
+  // disappear from the list automatically once accepted (server updates
+  // invitation.status, so it no longer matches the pending filter).
+
+  type ApiMember = {
+    id: string; role: 'owner' | 'admin' | 'member'; joined_at: string;
+    user_id: string; email: string; name: string | null;
+  };
+  type ApiInvitation = {
+    id: string; email: string; role: 'admin' | 'member';
+    status: string; created_at: string; expires_at: string;
+  };
+
+  const reloadTeamMembers = useCallback(async () => {
+    if (!localStorage.getItem('mdl-auth-token')) { setTeamMembers([]); return; }
+    if (workspaces.length === 0) { setTeamMembers([]); return; }
+
+    const settled = await Promise.allSettled(
+      workspaces.flatMap(ws => [
+        authFetch(`/api/workspaces/${ws.id}/members`)
+          .then(r => r.json() as Promise<{ success: boolean; data?: ApiMember[] }>)
+          .then(j => ({ ws_id: ws.id, kind: 'members' as const, rows: j.success ? (j.data ?? []) : [] })),
+        authFetch(`/api/workspaces/${ws.id}/invitations`)
+          .then(r => r.json() as Promise<{ success: boolean; data?: ApiInvitation[] }>)
+          .then(j => ({ ws_id: ws.id, kind: 'invites' as const, rows: j.success ? (j.data ?? []) : [] })),
+      ]),
+    );
+
+    const byEmail = new Map<string, TeamMember>();
+    for (const r of settled) {
+      if (r.status !== 'fulfilled') continue;
+      const { ws_id, kind, rows } = r.value;
+      for (const row of rows) {
+        const key = row.email.toLowerCase();
+        const existing = byEmail.get(key);
+        if (kind === 'members') {
+          const m = row as ApiMember;
+          const merged: TeamMember = existing ?? {
+            id: m.id,
+            email: m.email,
+            name: m.name ?? undefined,
+            user_id: m.user_id,
+            workspaceIds: [],
+            status: 'active',
+            invitedAt: m.joined_at,
+            role: m.role,
+            membershipsByWorkspace: {},
+            pendingInvites: [],
+          };
+          merged.status = 'active'; // active always wins over pending
+          merged.user_id = m.user_id;
+          merged.name = merged.name ?? (m.name ?? undefined);
+          merged.role = merged.role === 'owner' ? 'owner' : m.role;
+          if (!merged.workspaceIds.includes(ws_id)) merged.workspaceIds.push(ws_id);
+          merged.membershipsByWorkspace = { ...(merged.membershipsByWorkspace ?? {}), [ws_id]: m.id };
+          byEmail.set(key, merged);
+        } else {
+          const inv = row as ApiInvitation;
+          const merged: TeamMember = existing ?? {
+            id: inv.id,
+            email: inv.email,
+            workspaceIds: [],
+            status: 'pending',
+            invitedAt: inv.created_at,
+            role: inv.role,
+            membershipsByWorkspace: {},
+            pendingInvites: [],
+          };
+          if (!merged.workspaceIds.includes(ws_id)) merged.workspaceIds.push(ws_id);
+          merged.pendingInvites = [...(merged.pendingInvites ?? []), { workspace_id: ws_id, invitation_id: inv.id }];
+          byEmail.set(key, merged);
+        }
+      }
+    }
+
+    const list = Array.from(byEmail.values()).sort((a, b) => {
+      if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
+      return a.email.localeCompare(b.email);
+    });
+    setTeamMembers(list);
+  }, [workspaces]);
+
   const inviteMemberByEmail = useCallback(async (email: string, workspaceIds: string[], role: 'member' | 'admin' = 'member') => {
-    const wsNames = workspaces
-      .filter(w => workspaceIds.includes(w.id))
-      .map(w => w.name).join(', ');
-    const workspaceName = wsNames || workspaces[0]?.name || 'MDL.cc';
+    // The invite endpoint takes a workspaceName per call; fire one per
+    // selected workspace so a single email can be invited to multiple.
+    const targets = workspaces.filter(w => workspaceIds.includes(w.id));
+    if (targets.length === 0) throw new Error('Pick at least one workspace');
 
-    await authFetch('/api/invites', {
-      method: 'POST',
-      body: JSON.stringify({ email, workspaceName, inviteCode, role }),
-    });
+    const results = await Promise.all(targets.map(ws =>
+      authFetch('/api/invites', {
+        method: 'POST',
+        body: JSON.stringify({ email, workspaceName: ws.name, role }),
+      }).then(r => r.json()).catch(() => ({ success: false }))
+    ));
+    if (!results.some(r => (r as { success: boolean }).success)) {
+      throw new Error('Failed to send invitation');
+    }
 
-    const member: TeamMember = {
-      id: crypto.randomUUID(),
-      email,
-      workspaceIds,
-      status: 'pending',
-      invitedAt: new Date().toISOString(),
-      role,
-    };
-    const updated = [...teamMembers, member];
-    setTeamMembers(updated);
-    save(S.teamMembers, updated);
-  }, [teamMembers, workspaces, inviteCode]);
+    await reloadTeamMembers();
+  }, [workspaces, reloadTeamMembers]);
 
-  const assignMemberWorkspace = useCallback((memberId: string, workspaceId: string, assign: boolean) => {
-    const updated = teamMembers.map(m => {
-      if (m.id !== memberId) return m;
-      const ids = assign
-        ? [...new Set([...m.workspaceIds, workspaceId])]
-        : m.workspaceIds.filter(id => id !== workspaceId);
-      return { ...m, workspaceIds: ids };
-    });
-    setTeamMembers(updated);
-    save(S.teamMembers, updated);
-  }, [teamMembers]);
+  const removeMember = useCallback(async (member: TeamMember) => {
+    if (member.status === 'active' && member.membershipsByWorkspace) {
+      await Promise.all(Object.entries(member.membershipsByWorkspace).map(([wsId, memberId]) =>
+        authFetch(`/api/workspaces/${wsId}/members/${memberId}`, { method: 'DELETE' })
+      ));
+    } else if (member.status === 'pending' && member.pendingInvites) {
+      await Promise.all(member.pendingInvites.map(p =>
+        authFetch(`/api/workspaces/${p.workspace_id}/invitations/${p.invitation_id}`, { method: 'DELETE' })
+      ));
+    }
+    await reloadTeamMembers();
+  }, [reloadTeamMembers]);
 
-  const removeMember = useCallback((memberId: string) => {
-    const updated = teamMembers.filter(m => m.id !== memberId);
-    setTeamMembers(updated);
-    save(S.teamMembers, updated);
-  }, [teamMembers]);
+  // Refresh team-members from the server whenever the set of workspaces
+  // changes (initial load, workspace added/removed, token refresh).
+  useEffect(() => {
+    reloadTeamMembers();
+  }, [reloadTeamMembers]);
 
   const addDomain = useCallback(async (domain: string, workspaceId: string): Promise<CustomDomain> => {
     const res = await domainsApi.create({ domain, workspace_id: workspaceId });
@@ -368,8 +460,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       renameWorkspace,
       deleteWorkspace,
       inviteMemberByEmail,
-      assignMemberWorkspace,
       removeMember,
+      reloadTeamMembers,
       addDomain,
       verifyDomain,
       removeDomain,
