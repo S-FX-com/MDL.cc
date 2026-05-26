@@ -26,8 +26,26 @@ export async function register(request: Request, env: Env): Promise<Response> {
   if (!email.includes('@')) return errorResponse('Invalid email address', 400);
   if (password.length < 6) return errorResponse('Password must be at least 6 characters', 400);
 
+  // Password sign-up is invite-only. Require a workspace_slug plus a matching
+  // pending invitation for this email — otherwise refuse.
+  if (!workspace_slug) {
+    return errorResponse('Sign-up is by invitation only. Ask a workspace admin to invite you.', 403);
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const ws = await env.DB.prepare('SELECT id FROM workspaces WHERE slug = ?')
+    .bind(workspace_slug.toLowerCase().trim()).first<{ id: string }>();
+  if (!ws) return errorResponse('Workspace not found', 404);
+
+  const invite = await env.DB.prepare(
+    `SELECT id FROM invitations
+     WHERE workspace_id = ? AND email = ? AND status = 'pending' AND expires_at > datetime('now')
+     LIMIT 1`,
+  ).bind(ws.id, normalizedEmail).first();
+  if (!invite) return errorResponse('No active invitation for this email at the requested workspace.', 403);
+
   const existing = await env.DB.prepare('SELECT id FROM users WHERE email = ?')
-    .bind(email.toLowerCase().trim()).first();
+    .bind(normalizedEmail).first();
   if (existing) return errorResponse('Email already in use', 409);
 
   const { hash, salt } = await hashPassword(password, env.PBKDF2_SALT_PREFIX || 'mdl-cc');
@@ -37,39 +55,19 @@ export async function register(request: Request, env: Env): Promise<Response> {
   await env.DB.prepare(
     `INSERT INTO users (id, email, name, password_hash, password_salt, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).bind(userId, email.toLowerCase().trim(), name.trim(), hash, salt, now, now).run();
+  ).bind(userId, normalizedEmail, name.trim(), hash, salt, now, now).run();
 
-  if (workspace_slug) {
-    // Joining via invite — add to that workspace only, no personal workspace created
-    const ws = await env.DB.prepare('SELECT id FROM workspaces WHERE slug = ?')
-      .bind(workspace_slug.toLowerCase().trim()).first<{ id: string }>();
-    if (ws) {
-      await env.DB.prepare(
-        `INSERT OR IGNORE INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)`
-      ).bind(generateId(), ws.id, userId, 'member', now).run();
-    }
-  } else {
-    // No invite — create a personal workspace
-    const wsId = generateId();
-    const wsName = `${name.trim()}'s Workspace`;
-    const wsSlug = `${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${wsId.slice(0, 6)}`;
-
-    await env.DB.prepare(
-      `INSERT INTO workspaces (id, name, slug, owner_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
-    ).bind(wsId, wsName, wsSlug, userId, now, now).run();
-
-    await env.DB.prepare(
-      `INSERT INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)`
-    ).bind(generateId(), wsId, userId, 'owner', now).run();
-  }
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)`
+  ).bind(generateId(), ws.id, userId, 'member', now).run();
 
   const token = await signJWT(
-    { userId, email: email.toLowerCase().trim(), name: name.trim() },
+    { userId, email: normalizedEmail, name: name.trim() },
     env.JWT_SECRET
   );
 
   return successResponse(
-    { token, user: { id: userId, email: email.toLowerCase().trim(), name: name.trim() } },
+    { token, user: { id: userId, email: normalizedEmail, name: name.trim() } },
     'Account created successfully'
   );
 }

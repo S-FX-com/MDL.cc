@@ -1,6 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Link2, ArrowRight, Plus } from 'lucide-react';
+import { Link2, ArrowRight } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 export default function WorkspaceEntry() {
@@ -115,32 +115,10 @@ export default function WorkspaceEntry() {
           </form>
         </div>
 
-        {/* Create new workspace */}
-        <div
-          className="mt-4 rounded-2xl p-5"
-          style={{
-            background: isDark ? '#1e2f47' : '#ffffff',
-            border: isDark ? '1px solid #1e2f47' : '1px solid #e5e7eb',
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium" style={{ color: isDark ? '#f0f2f5' : '#0c1830' }}>
-                New to MDL.cc?
-              </p>
-              <p className="text-xs mt-0.5" style={{ color: '#8e8e93' }}>
-                Create a workspace for your team
-              </p>
-            </div>
-            <button
-              onClick={() => navigate('/register')}
-              className="btn btn-secondary btn-sm gap-1.5 shrink-0"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Create workspace
-            </button>
-          </div>
-        </div>
+        {/* Sign-up is invite-only — no public workspace creation. */}
+        <p className="text-xs text-center mt-4" style={{ color: '#8e8e93' }}>
+          New to MDL.cc? Ask a workspace admin to invite you.
+        </p>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Link2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -66,7 +66,7 @@ export default function Login() {
         {/* Logo */}
         <div className="flex items-center gap-2.5 mb-8 justify-center">
           <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center ring-accent"
+            className="w-9 h-9 rounded-xl flex items-center justify-center"
             style={{ background: 'linear-gradient(135deg, #0c1830 0%, #1c45cf 100%)' }}
           >
             <Link2 className="w-5 h-5 text-white" />
@@ -209,10 +209,7 @@ export default function Login() {
         </form>
 
         <p className="text-sm text-center mt-6" style={{ color: '#8e8e93' }}>
-          Don't have an account?{' '}
-          <Link to="/register" style={{ color: '#5b8ffe', fontWeight: 600 }}>
-            Sign up
-          </Link>
+          Sign-up is by invitation only.
         </p>
       </div>
     </div>

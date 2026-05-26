@@ -148,11 +148,16 @@ export async function microsoftCallback(request: Request, env: Env): Promise<Res
   // Upsert user. Three cases:
   //   a) already linked via microsoft_id → reuse
   //   b) email exists (password user) → link microsoft_id + mark verified
-  //   c) new user → insert
+  //   c) new user → only created if their domain is claimed (auto_join_mode='auto')
+  //      or a pending invitation exists for this email. Open sign-up is disabled.
   const now = new Date().toISOString();
+  const emailDomain = email.split('@')[1] || '';
+
   let userRow = await env.DB.prepare(
     'SELECT id, email, name FROM users WHERE microsoft_id = ?'
   ).bind(msId).first<{ id: string; email: string; name: string | null }>();
+
+  let pendingInvite: { id: string; workspace_id: string; role: string | null } | null = null;
 
   if (!userRow) {
     userRow = await env.DB.prepare(
@@ -164,6 +169,27 @@ export async function microsoftCallback(request: Request, env: Env): Promise<Res
         'UPDATE users SET microsoft_id = ?, email_verified = 1, updated_at = ? WHERE id = ?'
       ).bind(msId, now, userRow.id).run();
     } else {
+      // New user — gate behind domain claim or pending invitation.
+      const domainAllowed = emailDomain
+        ? await env.DB.prepare(
+            `SELECT workspace_id FROM workspace_domains
+             WHERE domain = ? AND auto_join_mode = 'auto' LIMIT 1`
+          ).bind(emailDomain).first<{ workspace_id: string }>()
+        : null;
+
+      pendingInvite = await env.DB.prepare(
+        `SELECT id, workspace_id, role FROM invitations
+         WHERE email = ? AND status = 'pending' AND expires_at > datetime('now')
+         ORDER BY created_at DESC LIMIT 1`
+      ).bind(email).first<{ id: string; workspace_id: string; role: string | null }>();
+
+      if (!domainAllowed && !pendingInvite) {
+        return redirectWithError(
+          env, request,
+          'Sign-up is restricted. Your email domain is not allowed — please ask a workspace admin to invite you.',
+        );
+      }
+
       const id = generateId();
       const name = (claims.name || email.split('@')[0]).trim();
       await env.DB.prepare(
@@ -171,14 +197,23 @@ export async function microsoftCallback(request: Request, env: Env): Promise<Res
          VALUES (?, ?, ?, ?, 1, ?, ?)`
       ).bind(id, email, name, msId, now, now).run();
       userRow = { id, email, name };
+
+      // If they got in via a pending invite, accept it now.
+      if (pendingInvite) {
+        await env.DB.prepare(
+          `INSERT OR IGNORE INTO workspace_members (id, workspace_id, user_id, role, joined_at)
+           VALUES (?, ?, ?, ?, ?)`
+        ).bind(generateId(), pendingInvite.workspace_id, userRow.id, pendingInvite.role || 'member', now).run();
+        await env.DB.prepare(
+          `UPDATE invitations SET status = 'accepted' WHERE id = ?`
+        ).bind(pendingInvite.id).run();
+      }
     }
   }
 
   // Domain auto-join: if the email's domain is claimed by a workspace with
-  // auto_join_mode = 'auto', add this user as a 'member' (idempotent).
-  // Falls back to creating a personal workspace only if no domain match AND
-  // the user has zero memberships (first sign-in).
-  const emailDomain = email.split('@')[1] || '';
+  // auto_join_mode = 'auto', add this user as a 'member' (idempotent). This
+  // also covers existing users whose domain was claimed after they signed up.
   if (emailDomain) {
     const claim = await env.DB.prepare(
       `SELECT workspace_id FROM workspace_domains
@@ -191,27 +226,6 @@ export async function microsoftCallback(request: Request, env: Env): Promise<Res
          VALUES (?, ?, ?, 'member', ?)`
       ).bind(generateId(), claim.workspace_id, userRow.id, now).run();
     }
-  }
-
-  // Ensure the user has at least one workspace. If they don't (no domain
-  // claim, no prior membership), create a personal one — keeps parity with
-  // password register flow.
-  const memberCount = await env.DB.prepare(
-    'SELECT COUNT(*) as c FROM workspace_members WHERE user_id = ?'
-  ).bind(userRow.id).first<{ c: number }>();
-
-  if (!memberCount || memberCount.c === 0) {
-    const wsId = generateId();
-    const baseName = (userRow.name || email.split('@')[0]).trim();
-    const wsSlug = `${baseName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${wsId.slice(0, 6)}`;
-    await env.DB.prepare(
-      `INSERT INTO workspaces (id, name, slug, owner_id, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).bind(wsId, `${baseName}'s Workspace`, wsSlug, userRow.id, now, now).run();
-    await env.DB.prepare(
-      `INSERT INTO workspace_members (id, workspace_id, user_id, role, joined_at)
-       VALUES (?, ?, ?, 'owner', ?)`
-    ).bind(generateId(), wsId, userRow.id, now).run();
   }
 
   const jwt = await signJWT(
