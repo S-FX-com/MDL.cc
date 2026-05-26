@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Links from './pages/Links';
@@ -10,21 +10,29 @@ import Invitations from './pages/Invitations';
 import Login from './pages/Login';
 import WorkspaceEntry from './pages/WorkspaceEntry';
 import Join from './pages/Join';
+import Landing from './pages/Landing';
 import { useAuth } from './contexts/AuthContext';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function AuthSpinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#010619' }}>
+      <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
+// Root gate: unauthenticated visitors see the marketing landing page at "/",
+// and any protected sub-path bounces them back to "/" instead of 404'ing
+// into a broken Layout. Authenticated users get the app shell as before.
+function RootGate() {
   const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#010619' }}>
-        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+  const location = useLocation();
+  if (loading) return <AuthSpinner />;
+  if (!user) {
+    if (location.pathname !== '/') return <Navigate to="/" replace />;
+    return <Landing />;
   }
-
-  if (!user) return <Navigate to="/workspace" replace />;
-  return <>{children}</>;
+  return <Layout />;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -44,15 +52,8 @@ function App() {
       {/* Invite acceptance — accessible logged in or out */}
       <Route path="/join" element={<Join />} />
 
-      {/* Protected app */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
+      {/* Root: Landing for logged-out, app shell for logged-in */}
+      <Route path="/" element={<RootGate />}>
         <Route index element={<Dashboard />} />
         <Route path="links" element={<Links />} />
         <Route path="links/:id" element={<LinkDetail />} />
