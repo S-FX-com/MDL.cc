@@ -35,6 +35,7 @@ import {
   updateWorkspace,
   deleteWorkspace,
   getWorkspaceMembers,
+  addWorkspaceMember,
   removeWorkspaceMember,
   updateMemberRole,
   lookupWorkspace,
@@ -164,8 +165,9 @@ export default {
       }
 
       const wsMembersMatch = path.match(/^\/api\/workspaces\/([^/]+)\/members$/);
-      if (wsMembersMatch && method === 'GET') {
-        return getWorkspaceMembers(wsMembersMatch[1], request, env);
+      if (wsMembersMatch) {
+        if (method === 'GET')  return getWorkspaceMembers(wsMembersMatch[1], request, env);
+        if (method === 'POST') return addWorkspaceMember(wsMembersMatch[1], request, env);
       }
 
       const wsMemberMatch = path.match(/^\/api\/workspaces\/([^/]+)\/members\/([^/]+)$/);

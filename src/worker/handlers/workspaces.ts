@@ -110,6 +110,60 @@ export async function getWorkspaceMembers(wsId: string, request: Request, env: E
   return successResponse(members.results);
 }
 
+// Add an *existing* user to a workspace by email. Open sign-up is disabled
+// elsewhere (auth.register is invite-gated), so this endpoint only succeeds
+// for users that already have an account — making it safe for owners and
+// admins to drop existing teammates into more of their workspaces without
+// resending a full invitation email.
+export async function addWorkspaceMember(wsId: string, request: Request, env: Env): Promise<Response> {
+  const user = await getAuthUser(request, env);
+  if (!user) return errorResponse('Unauthorized', 401);
+
+  const requester = await env.DB.prepare(
+    `SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?`,
+  ).bind(wsId, user.id).first<{ role: string }>();
+  if (!requester || !['owner', 'admin'].includes(requester.role)) {
+    return errorResponse('Forbidden', 403);
+  }
+
+  let body: { email?: string; role?: string };
+  try { body = await request.json(); } catch { return errorResponse('Invalid request body', 400); }
+
+  const email = (body.email || '').toLowerCase().trim();
+  if (!email || !email.includes('@')) return errorResponse('A valid email is required', 400);
+  const role = body.role === 'admin' ? 'admin' : 'member';
+
+  const target = await env.DB.prepare(
+    'SELECT id FROM users WHERE email = ?',
+  ).bind(email).first<{ id: string }>();
+  if (!target) {
+    return errorResponse('That user does not have an MDL.cc account yet. Send an invitation instead.', 404);
+  }
+
+  const existing = await env.DB.prepare(
+    `SELECT id FROM workspace_members WHERE workspace_id = ? AND user_id = ?`,
+  ).bind(wsId, target.id).first<{ id: string }>();
+  if (existing) {
+    return errorResponse('User is already a member of this workspace', 409);
+  }
+
+  const id = generateId();
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    `INSERT INTO workspace_members (id, workspace_id, user_id, role, joined_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  ).bind(id, wsId, target.id, role, now).run();
+
+  const row = await env.DB.prepare(`
+    SELECT wm.id, wm.role, wm.joined_at,
+           u.id as user_id, u.email, u.name, u.avatar_url
+    FROM workspace_members wm
+    JOIN users u ON u.id = wm.user_id
+    WHERE wm.id = ?
+  `).bind(id).first();
+  return successResponse(row, 'Member added');
+}
+
 export async function updateMemberRole(wsId: string, memberId: string, request: Request, env: Env): Promise<Response> {
   const user = await getAuthUser(request, env);
   if (!user) return errorResponse('Unauthorized', 401);
