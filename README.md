@@ -1,174 +1,222 @@
-# MDL.cc
+<p align="center">
+  <img src="web/public/favicon.svg" alt="MDL.cc" width="64" height="64" />
+</p>
 
-**The middle-point between you and your audience.**
+<h1 align="center">MDL.cc</h1>
 
-A fast, modern URL shortening service built on Cloudflare's global edge network. MDL (pronounced "Middle") serves as the middle-point, connecting you to your audience with lightning-fast redirects and comprehensive analytics.
+<p align="center"><em>The middle-point between you and your audience.</em></p>
+
+A fast, modern URL shortening service built on Cloudflare's global edge network. MDL (pronounced "Middle") serves as the middle-point between you and your audience, with sub-10ms redirects, workspace-based team management, and real-time analytics — all running 100% on Cloudflare.
 
 ## Features
 
-- **Ultra-Fast Redirects**: KV-powered lookups for sub-10ms global redirects
-- **Link Management**: Create, edit, and organize your shortened URLs
-- **Groups & Folders**: Organize links by campaign, project, or category
-- **Real-time Analytics**: Track clicks, geographic data, devices, browsers, and referrers
-- **QR Code Generation**: Generate customizable QR codes for any link
-- **Custom Aliases**: Choose your own memorable short codes
-- **Password Protection**: Secure sensitive links with passwords
-- **Link Expiration**: Set automatic expiration dates
-- **Light & Dark Mode**: Beautiful UI that adapts to your preference
-- **Branded Links**: Support for custom domains (coming soon)
+- **Ultra-fast redirects** — KV-powered lookups deliver sub-10ms global reads
+- **Workspaces** — Each team gets its own workspace with members, roles, and link library
+- **Microsoft 365 sign-in** — OAuth2 + PKCE against the multi-tenant `/common` endpoint
+- **Email-domain auto-join** — Claim a domain so matching users land in the right workspace on first SSO
+- **Invite-only sign-up** — Password sign-ups require a pending invitation; Microsoft sign-ups require a claimed domain or an invite
+- **Link management** — Create, edit, group, and organise shortened URLs from a unified dashboard
+- **Groups & folders** — Keep campaigns, projects, and teams tidy
+- **Real-time analytics** — Clicks, geos, devices, browsers, and referrers, live
+- **QR code generation** — Customisable colours, sizes, embed-ready
+- **Custom aliases** — Pick your own memorable short codes
+- **Password-protected links** — Gate sensitive URLs behind a password
+- **Link expiration** — Auto-expire links on a schedule
+- **Branded domains** — Bring your own hostname; verified per-workspace
+- **Light & dark mode** — Adaptive UI
 
-## Tech Stack
+## Tech stack
 
-- **Runtime**: Cloudflare Workers (Edge)
+- **Runtime**: Cloudflare Workers (TypeScript)
 - **Database**: Cloudflare D1 (SQLite)
-- **Cache**: Cloudflare KV (Key-Value Store)
+- **Cache**: Cloudflare KV
+- **Static assets**: Cloudflare Workers Assets (serves the SPA shell)
 - **Frontend**: React 18 + Vite + TypeScript
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS + a scoped CSS layer for the marketing landing
 - **Charts**: Recharts
+- **Email**: Resend (workspace invitations)
+
+## Brand
+
+The new design system pairs a deep navy field with a cyan accent — same palette used by the favicon, the in-app logo, and the marketing landing.
+
+| Token | Hex | Use |
+|---|---|---|
+| Primary | `#0C1B30` | Background, dark surfaces |
+| Tertiary | `#1C2F47` | Elevated cards |
+| Accent | `#00D1F9` | Logo mark, links, focus rings |
+| Secondary | `#8888FF` | "Coming soon" / muted highlights |
+
+Typography: **Clash Grotesk** (display), **Inter** (body), **JetBrains Mono** (code/micro-copy).
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Cloudflare Edge Network                   │
-├─────────────────────────────────────────────────────────────┤
-│  ┌───────────────┐    ┌───────────────┐    ┌─────────────┐ │
-│  │   KV Store    │    │    Worker     │    │     D1      │ │
-│  │  (URL Cache)  │◄───│   (Router)    │───►│  (Database) │ │
-│  └───────────────┘    └───────────────┘    └─────────────┘ │
-│          ▲                   │                              │
-│          │                   ▼                              │
-│          │            ┌───────────────┐                     │
-│          └────────────│  Static Site  │                     │
-│                       │   (React SPA) │                     │
-│                       └───────────────┘                     │
-└─────────────────────────────────────────────────────────────┘
+┌────────────────────────── Cloudflare Edge ──────────────────────────┐
+│                                                                     │
+│   ┌──────────┐     ┌────────────────────┐     ┌─────────────────┐   │
+│   │  KV      │ ◄── │  Worker (router)   │ ──► │  D1 (SQLite)    │   │
+│   │  cache   │     │  src/worker/*      │     │  schema.sql     │   │
+│   └──────────┘     └────────────────────┘     └─────────────────┘   │
+│                            │                                        │
+│                            ▼                                        │
+│                    ┌────────────────────┐                           │
+│                    │  Workers Assets    │  ◄── React SPA            │
+│                    │  (SPA fallback)    │      web/dist             │
+│                    └────────────────────┘                           │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-## Project Structure
+Every redirect resolves at the edge in <10ms; click events fan out asynchronously so the response is never blocked.
+
+## Project structure
 
 ```
 MDL.cc/
-├── src/
-│   └── worker/           # Cloudflare Worker code
-│       ├── index.ts      # Main entry point & router
-│       ├── types.ts      # TypeScript type definitions
-│       ├── utils.ts      # Utility functions
-│       └── handlers/     # Request handlers
-│           ├── redirect.ts  # URL redirect logic
-│           ├── api.ts       # REST API endpoints
-│           └── qr.ts        # QR code generation
-├── web/                  # React frontend
-│   ├── src/
-│   │   ├── components/   # Reusable UI components
-│   │   ├── contexts/     # React contexts (Theme)
-│   │   ├── lib/          # API client & utilities
-│   │   └── pages/        # Page components
-│   └── public/           # Static assets
-├── migrations/           # D1 database migrations
-├── wrangler.toml         # Cloudflare configuration
-└── package.json          # Dependencies & scripts
+├── src/worker/                       # Cloudflare Worker (TypeScript)
+│   ├── index.ts                      # Router entry point
+│   ├── handlers/
+│   │   ├── api.ts                    # Links, groups, analytics
+│   │   ├── auth.ts                   # Register / login / me (invite-gated)
+│   │   ├── microsoft.ts              # OAuth2 + PKCE sign-in
+│   │   ├── email.ts                  # Invitation send / validate / accept (Resend)
+│   │   ├── workspaces.ts             # Workspace CRUD & membership
+│   │   ├── workspaceDomains.ts       # Email-domain claims & auto-join
+│   │   ├── domains.ts                # Branded custom domains
+│   │   ├── preview.ts                # Open Graph link previews
+│   │   ├── qr.ts                     # QR code generation
+│   │   └── redirect.ts               # Short-link resolution
+│   ├── lib/        (jwt, password)
+│   ├── middleware/ (auth)
+│   ├── types.ts, utils.ts
+├── web/                              # React SPA
+│   ├── public/favicon.svg            # Brand mark
+│   └── src/
+│       ├── pages/
+│       │   ├── Landing.tsx + .css    # Public marketing landing (logged-out /)
+│       │   ├── Login.tsx             # Password + Microsoft sign-in
+│       │   ├── WorkspaceEntry.tsx    # Workspace lookup by slug
+│       │   ├── Join.tsx              # Invite acceptance
+│       │   ├── Dashboard.tsx, Links.tsx, LinkDetail.tsx,
+│       │   ├── Groups.tsx, Analytics.tsx, Invitations.tsx, Settings.tsx
+│       ├── components/  (Layout, CreateLinkModal, EmailDomainsCard, QRCodeDisplay)
+│       ├── contexts/    (AuthContext, ThemeContext, WorkspaceContext)
+│       └── lib/         (api, features)
+├── migrations/                       # D1 schema
+├── wrangler.toml                     # Cloudflare bindings (KV, D1, Assets)
+└── package.json
 ```
 
-## Getting Started
+## Getting started
 
 ### Prerequisites
 
 - Node.js 18+
-- npm or yarn
-- Cloudflare account (for deployment)
+- A Cloudflare account (for deployment)
 
-### Local Development
+### Local development
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/your-username/MDL.cc.git
-   cd MDL.cc
-   ```
-
-2. **Install dependencies**
+1. **Install**
    ```bash
    npm install
-   cd web && npm install && cd ..
    ```
+   The web app is a workspace, so its deps come along.
 
-3. **Set up local database**
+2. **Migrate the local D1 database**
    ```bash
    npm run db:migrate:local
    ```
 
-4. **Start development servers**
+3. **Run**
    ```bash
    npm run dev
    ```
+   - Worker on `http://localhost:8787`
+   - Vite dev server on `http://localhost:3000` (proxies `/api` to the worker)
 
-   This starts:
-   - Cloudflare Worker on `http://localhost:8787`
-   - React frontend on `http://localhost:3000`
+   Visit `http://localhost:3000` — logged-out visitors see the marketing landing; the **Sign In** link drops you into the workspace-selection flow.
 
 ### Deployment
 
-1. **Configure Cloudflare**
-   - Create a KV namespace named `mdl_urls_kv`
-   - Create a D1 database named `mdl-db`
-   - Update `wrangler.toml` with your resource IDs
-
-2. **Run database migrations**
+1. Provision a KV namespace and a D1 database, then update `wrangler.toml` with the IDs.
+2. Apply the schema:
    ```bash
    npm run db:migrate
    ```
-
-3. **Deploy**
+3. Configure secrets (`wrangler secret put`):
+   - `JWT_SECRET` — JWT signing key
+   - `PBKDF2_SALT_PREFIX` — server-side salt prefix for password hashing
+   - `RESEND_API_KEY` — required for invitation emails
+   - `MS_CLIENT_ID`, `MS_CLIENT_SECRET` — required for Microsoft sign-in
+4. Deploy:
    ```bash
    npm run deploy
    ```
 
-## API Reference
+## Sign-up policy
 
-### Create Link
+Sign-up is **invite-only** by design (the public landing page reflects this with an "Alpha — sign-ups temporarily closed" notice on every sign-up CTA):
+
+- **Password sign-up** at `/api/auth/register` requires a pending invitation matching the email + workspace.
+- **Microsoft sign-in** creates a new user only when their email domain is claimed by a workspace with `auto_join_mode = 'auto'`, or a pending invitation matches the email.
+- Existing accounts can always sign in.
+
+Invitations are sent via Resend (`POST /api/invites`) and accepted at `/join?code=…`.
+
+## API reference (excerpt)
+
+### Auth
 ```http
-POST /api/links
-Content-Type: application/json
-
-{
-  "url": "https://example.com/long-url",
-  "custom_code": "my-link",    // optional
-  "title": "My Link",          // optional
-  "group_id": "...",           // optional
-  "password": "secret"         // optional
-}
+POST /api/auth/login            { email, password }
+POST /api/auth/register         { email, password, name, workspace_slug }   # invite-gated
+GET  /api/auth/me               Authorization: Bearer <jwt>
+GET  /api/auth/microsoft/start
+GET  /api/auth/microsoft/callback
 ```
 
-### Get Links
+### Invitations
 ```http
-GET /api/links?page=1&limit=20&group_id=...&search=...
+POST /api/invites               { email, workspaceName, role }
+GET  /api/invites/validate?code=<token>
+POST /api/invites/accept        { code }
 ```
 
-### Get Link Analytics
+### Links
 ```http
-GET /api/links/:id/analytics?days=30
+POST /api/links                 { url, custom_code?, title?, group_id?, password? }
+GET  /api/links?page=1&limit=20&group_id=…&search=…
+GET  /api/links/:id/analytics?days=30
 ```
 
-### Generate QR Code
+### QR codes
 ```http
 GET /api/qr?code=my-link&size=256&fg=#000000&bg=#FFFFFF
 ```
 
-## Speed Optimizations
+### Workspaces & domains
+```http
+GET    /api/workspaces
+POST   /api/workspaces
+GET    /api/workspaces/:id/invitations
+GET    /api/workspaces/:id/email-domains
+POST   /api/workspaces/:id/email-domains   { domain, auto_join_mode }
+```
 
-1. **KV-First Lookups**: Short URL data is cached in Cloudflare KV for sub-10ms global reads
-2. **Edge Computing**: All logic runs on Cloudflare's edge, close to users worldwide
-3. **Async Analytics**: Click tracking runs asynchronously, never blocking redirects
-4. **Efficient Queries**: Database indexes on frequently queried columns
+## Speed optimisations
+
+1. **KV-first lookups** — short-link data is cached for sub-10ms global reads.
+2. **Edge-native** — all logic runs on Cloudflare Workers, close to users.
+3. **Async analytics** — click tracking never blocks the redirect.
+4. **Indexed queries** — D1 indexes on the hot paths (`code`, `workspace_id`).
 
 ## Contributing
 
-Contributions are welcome! Please read our contributing guidelines before submitting a PR.
+Contributions welcome — please open an issue first for any non-trivial change.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE).
 
 ---
 
-**MDL.cc** - The middle-point between you and your audience.
+**MDL.cc** — the middle-point between you and your audience.
