@@ -15,10 +15,15 @@ async function request<T>(
 ): Promise<ApiResponse<T>> {
   const url = `${API_BASE}${endpoint}`;
 
+  // Attach the bearer token so auth-protected endpoints (e.g. /domains,
+  // which require getAuthUser) don't fall through to a 401 "Unauthorized".
+  const token = localStorage.getItem('mdl-auth-token');
+
   const response = await fetch(url, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
   });
