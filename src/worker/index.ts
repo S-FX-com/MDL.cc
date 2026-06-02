@@ -124,9 +124,9 @@ export default {
       const linkMatch = path.match(/^\/api\/links\/([^/]+)$/);
       if (linkMatch) {
         const linkId = linkMatch[1];
-        if (method === 'GET') return getLink(linkId, env);
+        if (method === 'GET') return getLink(linkId, request, env);
         if (method === 'PUT') return updateLink(linkId, request, env);
-        if (method === 'DELETE') return deleteLink(linkId, env);
+        if (method === 'DELETE') return deleteLink(linkId, request, env);
       }
 
       // Link analytics
@@ -137,7 +137,7 @@ export default {
 
       // Groups
       if (path === '/api/groups') {
-        if (method === 'GET') return getGroups(env);
+        if (method === 'GET') return getGroups(request, env);
         if (method === 'POST') return createGroup(request, env);
       }
 
@@ -145,12 +145,12 @@ export default {
       if (groupMatch) {
         const groupId = groupMatch[1];
         if (method === 'PUT') return updateGroup(groupId, request, env);
-        if (method === 'DELETE') return deleteGroup(groupId, env);
+        if (method === 'DELETE') return deleteGroup(groupId, request, env);
       }
 
       // Tags
       if (path === '/api/tags') {
-        if (method === 'GET') return getTags(env);
+        if (method === 'GET') return getTags(request, env);
         if (method === 'POST') return createTag(request, env);
       }
 

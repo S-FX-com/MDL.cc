@@ -44,14 +44,14 @@ export default function CreateLinkModal({ open, onClose, initialUrl = '', onSucc
 
   // Load groups
   useEffect(() => {
-    if (open) {
-      groupsApi.list().then((res) => {
+    if (open && activeWorkspaceId) {
+      groupsApi.list(activeWorkspaceId).then((res) => {
         if (res.success && res.data) {
           setGroups(res.data);
         }
       });
     }
-  }, [open]);
+  }, [open, activeWorkspaceId]);
 
   // Reset form when modal opens/closes
   useEffect(() => {

@@ -74,7 +74,7 @@ export async function register(request: Request, env: Env): Promise<Response> {
 
 export async function login(request: Request, env: Env): Promise<Response> {
   let body: LoginBody;
-  try { body = await request.json<LoginBody>(); } catch { return errorResponse('Cuerpo inválido', 400); }
+  try { body = await request.json<LoginBody>(); } catch { return errorResponse('Invalid request body', 400); }
 
   const { email, password } = body;
   if (!email || !password) return errorResponse('email and password are required', 400);
@@ -125,7 +125,7 @@ export async function updateProfile(request: Request, env: Env): Promise<Respons
   if (!payload) return errorResponse('Invalid token', 401);
 
   let body: { name?: string };
-  try { body = await request.json(); } catch { return errorResponse('Cuerpo inválido', 400); }
+  try { body = await request.json(); } catch { return errorResponse('Invalid request body', 400); }
 
   if (body.name?.trim()) {
     await env.DB.prepare(`UPDATE users SET name = ?, updated_at = ? WHERE id = ?`)

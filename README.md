@@ -139,10 +139,20 @@ MDL.cc/
 ### Deployment
 
 1. Provision a KV namespace and a D1 database, then update `wrangler.toml` with the IDs.
-2. Apply the schema:
+2. Apply the schema. `migrations/schema.sql` is the canonical, idempotent full
+   schema — run it for a **fresh** database:
    ```bash
    npm run db:migrate
    ```
+   For an **existing** database provisioned from an older schema, apply only the
+   newer incremental migrations (they are additive and safe to run once):
+   ```bash
+   wrangler d1 execute mdl-db --file=./migrations/0005_invitations.sql
+   wrangler d1 execute mdl-db --file=./migrations/0006_groups_tags_workspace_scope.sql
+   ```
+   > The numbered files (`0001…`) are the incremental history. Do **not** replay
+   > `0002` against a live database — it rebuilds the `domains` table and deletes
+   > workspace-less links. A fresh database only needs `schema.sql`.
 3. Configure secrets (`wrangler secret put`):
    - `JWT_SECRET` — JWT signing key
    - `PBKDF2_SALT_PREFIX` — server-side salt prefix for password hashing
@@ -165,6 +175,13 @@ Invitations are sent via Resend (`POST /api/invites`) and accepted at `/join?cod
 
 ## API reference (excerpt)
 
+All management endpoints (links, groups, tags, analytics, dashboard stats,
+workspaces, domains, invitations) require a `Authorization: Bearer <jwt>` header
+and are scoped to a workspace the caller belongs to — link/group/tag reads and
+writes pass a `workspace_id` and are rejected (`403`) for non-members. Only the
+public short-link redirect, the invite-validation lookup, and `/api/health` are
+unauthenticated.
+
 ### Auth
 ```http
 POST /api/auth/login            { email, password }
@@ -183,8 +200,8 @@ POST /api/invites/accept        { code }
 
 ### Links
 ```http
-POST /api/links                 { url, custom_code?, title?, group_id?, password? }
-GET  /api/links?page=1&limit=20&group_id=…&search=…
+POST /api/links                 { url, workspace_id, custom_code?, title?, group_id?, password? }
+GET  /api/links?workspace_id=…&page=1&limit=20&group_id=…&search=…
 GET  /api/links/:id/analytics?days=30
 ```
 

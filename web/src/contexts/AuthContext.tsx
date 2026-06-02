@@ -30,8 +30,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [loading, setLoading] = useState(true);
 
-  // Al montar, capturar token de un callback SSO (#token=...) si viene en la URL.
-  // Esto deja al provider en estado autenticado inmediatamente sin re-render extra.
+  // On mount, capture a token from an SSO callback (#token=...) if present in
+  // the URL. This puts the provider into an authenticated state immediately
+  // without an extra re-render.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!window.location.hash.includes('token=')) return;
@@ -40,14 +41,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (ssoToken) {
       localStorage.setItem(TOKEN_KEY, ssoToken);
       setToken(ssoToken);
-      // Limpiar el fragment para que un refresh no re-procese el token.
+      // Clear the fragment so a refresh doesn't re-process the token.
       const url = new URL(window.location.href);
       url.hash = '';
       window.history.replaceState({}, '', url.toString());
     }
   }, []);
 
-  // Al montar, verificar token guardado
+  // On mount, verify any saved token
   useEffect(() => {
     const savedToken = localStorage.getItem(TOKEN_KEY);
     if (!savedToken) {
@@ -114,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
-    // Limpiar también datos de workspace del localStorage
+    // Also clear workspace data from localStorage
     ['mdl-workspaces', 'mdl-active-workspace', 'mdl-has-agency',
      'mdl-team-members', 'mdl-custom-domains', 'mdl-invite-code',
      'mdl-link-workspaces', 'mdl-display-name', 'mdl-default-domain-ids'].forEach(k => localStorage.removeItem(k));
