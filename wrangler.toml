@@ -34,15 +34,6 @@ ENVIRONMENT = "development"
 # pattern = "mdl.cc/*"
 # zone_name = "mdl.cc"
 
-# Branded customer domains hosted on THIS Cloudflare account are attached as
-# Worker custom domains: Cloudflare provisions the proxied DNS record + edge
-# cert automatically on deploy, so the worker receives <domain>/{code} directly
-# (no cname.mdl.cc hop needed). Add one entry per same-account branded domain.
-# Customer-owned domains on other accounts need Cloudflare for SaaS instead.
-[[routes]]
-pattern = "go.s-fx.com"
-custom_domain = true
-
 # Static assets for the web app
 [assets]
 binding = "ASSETS"
