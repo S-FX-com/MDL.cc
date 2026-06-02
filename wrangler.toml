@@ -23,6 +23,13 @@ ENVIRONMENT = "production"
 APP_NAME = "MDL.cc"
 APP_TAGLINE = "The middle-point between you and your audience"
 
+# Cloudflare for SaaS (branded custom domains like go.s-fx.com).
+# The zone id of mdl.cc (Cloudflare dashboard → mdl.cc → Overview → API → Zone ID).
+# CF_API_TOKEN is a secret: `wrangler secret put CF_API_TOKEN`
+# (token scoped to mdl.cc with SSL and Certificates: Edit + Zone Settings: Read).
+CF_ZONE_ID = "96b19e02eaa9b35960cec121b9587541"
+CF_CNAME_TARGET = "cname.mdl.cc"
+
 # Development environment
 [env.dev]
 name = "mdl-cc-dev"
