@@ -65,6 +65,7 @@ export interface Link {
 export interface LinkGroup {
   id: string;
   user_id: string;
+  workspace_id: string | null;
   name: string;
   description: string | null;
   color: string;
@@ -118,6 +119,7 @@ export interface Domain {
 export interface Tag {
   id: string;
   user_id: string;
+  workspace_id: string | null;
   name: string;
   color: string;
   created_at: string;

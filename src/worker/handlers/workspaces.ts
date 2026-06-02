@@ -1,5 +1,9 @@
 // MDL.cc - Workspace handlers
 
+import { Env } from '../types';
+import { generateId, successResponse, errorResponse, jsonResponse } from '../utils';
+import { getAuthUser } from '../middleware/auth';
+
 export async function lookupWorkspace(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const slug = url.searchParams.get('slug')?.toLowerCase().trim();
@@ -11,10 +15,6 @@ export async function lookupWorkspace(request: Request, env: Env): Promise<Respo
   if (!ws) return jsonResponse({ success: false, found: false, message: 'Workspace not found' });
   return jsonResponse({ success: true, found: true, workspace: ws });
 }
-
-import { Env } from '../types';
-import { generateId, successResponse, errorResponse, jsonResponse } from '../utils';
-import { getAuthUser } from '../middleware/auth';
 
 export async function getWorkspaces(request: Request, env: Env): Promise<Response> {
   const user = await getAuthUser(request, env);

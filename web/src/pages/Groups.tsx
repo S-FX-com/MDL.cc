@@ -10,6 +10,7 @@ import {
   X,
 } from 'lucide-react';
 import { groups as groupsApi, LinkGroup, CreateGroupPayload } from '../lib/api';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import clsx from 'clsx';
 
 const GROUP_COLORS = [
@@ -24,6 +25,7 @@ const GROUP_COLORS = [
 ];
 
 export default function Groups() {
+  const { activeWorkspaceId } = useWorkspace();
   const [groups, setGroups] = useState<LinkGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -38,11 +40,16 @@ export default function Groups() {
 
   useEffect(() => {
     loadGroups();
-  }, []);
+  }, [activeWorkspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadGroups = async () => {
+    if (!activeWorkspaceId) {
+      setGroups([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    const response = await groupsApi.list();
+    const response = await groupsApi.list(activeWorkspaceId);
     if (response.success && response.data) {
       setGroups(response.data);
     }
@@ -75,7 +82,7 @@ export default function Groups() {
     if (editingGroup) {
       await groupsApi.update(editingGroup.id, formData);
     } else {
-      await groupsApi.create(formData);
+      await groupsApi.create({ ...formData, workspace_id: activeWorkspaceId });
     }
 
     await loadGroups();

@@ -210,18 +210,28 @@ export async function generateQR(request: Request, env: Env): Promise<Response> 
     let targetUrl: string;
 
     if (linkId) {
-      // Get link from database
-      const link = await env.DB.prepare('SELECT short_code FROM links WHERE id = ?')
+      // Resolve the link with its (optional) branded domain so the QR encodes
+      // the exact URL the redirect handler serves. On the shared domain that's
+      // mdl.cc/m{code}; on a branded domain it's <domain>/{code}.
+      const link = await env.DB.prepare(
+        `SELECT l.short_code, d.domain AS domain_host
+         FROM links l LEFT JOIN domains d ON l.domain_id = d.id
+         WHERE l.id = ?`,
+      )
         .bind(linkId)
-        .first<{ short_code: string }>();
+        .first<{ short_code: string; domain_host: string | null }>();
 
       if (!link) {
         return errorResponse('Link not found', 404);
       }
 
-      targetUrl = `https://mdl.cc/${link.short_code}`;
+      targetUrl = link.domain_host
+        ? `https://${link.domain_host}/${link.short_code}`
+        : `https://mdl.cc/m${link.short_code}`;
     } else if (shortCode) {
-      targetUrl = `https://mdl.cc/${shortCode}`;
+      // Shared-domain short links resolve at the "/m" prefix; without it the
+      // QR points at an app route that 404s.
+      targetUrl = `https://mdl.cc/m${shortCode}`;
     } else if (customUrl) {
       targetUrl = customUrl;
     } else {

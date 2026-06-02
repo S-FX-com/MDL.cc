@@ -13,10 +13,13 @@ import {
   Filter,
   Check,
   Link2,
+  X,
+  Download,
 } from 'lucide-react';
 import { links, Link as LinkType, LinksResponse, groups as groupsApi, LinkGroup, shortLinkHref, shortLinkDisplay } from '../lib/api';
 import { format, parseISO } from 'date-fns';
 import CreateLinkModal from '../components/CreateLinkModal';
+import QRCodeDisplay, { useQRDownload } from '../components/QRCodeDisplay';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 
 export default function Links() {
@@ -31,17 +34,25 @@ export default function Links() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
+  const [qrLink, setQrLink] = useState<LinkType | null>(null);
   const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const { ref: qrRef, download: downloadQR } = useQRDownload(
+    qrLink ? `mdl-${qrLink.short_code}.svg` : 'qr-code.svg',
+  );
 
   const page = parseInt(searchParams.get('page') || '1');
 
   useEffect(() => {
-    groupsApi.list().then((res) => {
+    if (!activeWorkspaceId) {
+      setGroups([]);
+      return;
+    }
+    groupsApi.list(activeWorkspaceId).then((res) => {
       if (res.success && res.data) {
         setGroups(res.data);
       }
     });
-  }, []);
+  }, [activeWorkspaceId]);
 
   useEffect(() => {
     loadLinks();
@@ -261,15 +272,13 @@ export default function Links() {
                           >
                             <BarChart3 className="w-4 h-4 text-neutral-500" />
                           </Link>
-                          <a
-                            href={`/api/qr?code=${link.short_code}&size=200`}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            onClick={() => setQrLink(link)}
                             className="p-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
-                            title="Download QR"
+                            title="Show QR code"
                           >
                             <QrCode className="w-4 h-4 text-neutral-500" />
-                          </a>
+                          </button>
                           <button
                             ref={(el) => { menuButtonRefs.current[link.id] = el; }}
                             onClick={() => openMenu(link.id)}
@@ -344,6 +353,34 @@ export default function Links() {
         onClose={() => setCreateModalOpen(false)}
         onSuccess={() => loadLinks()}
       />
+
+      {/* QR Code Modal — rendered client-side so it always points at the live
+          short URL (branded host or mdl.cc/m{code}) and is reliably scannable. */}
+      {qrLink && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setQrLink(null)}>
+          <div className="modal-content max-w-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">QR Code</h2>
+              <button
+                onClick={() => setQrLink(null)}
+                className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div ref={qrRef} className="mx-auto w-fit rounded-xl bg-white p-4">
+              <QRCodeDisplay value={shortLinkHref(qrLink)} size={200} />
+            </div>
+            <p className="mt-3 text-center text-sm text-neutral-500 dark:text-neutral-400 break-all">
+              {shortLinkDisplay(qrLink)}
+            </p>
+            <button onClick={downloadQR} className="btn btn-primary w-full mt-4 gap-1.5">
+              <Download className="w-4 h-4" />
+              Download SVG
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Three-dot dropdown — rendered at the root level (fixed) to escape overflow:hidden */}
       {activeMenu && (

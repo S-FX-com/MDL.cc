@@ -51,7 +51,7 @@ export async function sendInviteEmail(request: Request, env: Env): Promise<Respo
     VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)
   `).bind(generateId(), workspace.id, email.toLowerCase(), inviteRole, user.id, token, expiresAt).run();
 
-  const appUrl = env.ENVIRONMENT === 'production' ? 'https://mdl.cc' : 'http://localhost:5173';
+  const appUrl = env.ENVIRONMENT === 'production' ? 'https://mdl.cc' : 'http://localhost:3000';
   const inviteLink = `${appUrl}/join?code=${token}`;
   const inviterName = body.inviterName || user.name || user.email;
 

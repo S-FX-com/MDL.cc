@@ -165,7 +165,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     return code;
   });
 
-  // ── Cargar workspaces desde la API ──────────────────────────────────────
+  // ── Load workspaces from the API ────────────────────────────────────────
 
   const reloadWorkspaces = useCallback(async () => {
     const token = localStorage.getItem('mdl-auth-token');
@@ -185,7 +185,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           role: w.role === 'owner' || w.role === 'admin' ? 'Admin' : 'Member',
         }));
         setWorkspaces(ws);
-        // Activar primer workspace si no hay uno activo o el activo ya no existe
+        // Activate the first workspace if none is active or the active one is gone
         if (ws.length > 0) {
           // If coming from workspace entry page, activate that workspace
           const sessionSlug = sessionStorage.getItem('mdl-workspace-slug');
@@ -212,7 +212,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (e) {
-      console.error('Error cargando workspaces:', e);
+      console.error('Error loading workspaces:', e);
     } finally {
       setLoadingWorkspaces(false);
     }
@@ -254,7 +254,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ name }),
     });
     const data = await res.json() as { success: boolean; data?: Workspace; error?: string };
-    if (!data.success || !data.data) throw new Error(data.error || 'Error creando workspace');
+    if (!data.success || !data.data) throw new Error(data.error || 'Failed to create workspace');
 
     const ws: Workspace = { ...data.data, role: 'Admin', rawRole: 'owner' };
     setWorkspaces(prev => [...prev, ws]);

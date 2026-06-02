@@ -153,6 +153,16 @@ async function trackClick(linkId: string, request: Request, env: Env): Promise<v
     const ipHash = await hashIP(ip);
     const today = getToday();
 
+    // Decide uniqueness BEFORE inserting this click — otherwise the row we just
+    // wrote always matches the "have we seen this ip today?" probe and no visitor
+    // is ever counted as unique past the day's first click.
+    const seen = await env.DB.prepare(
+      `SELECT 1 AS ok FROM clicks
+       WHERE link_id = ? AND date(timestamp) = ? AND ip_hash = ?
+       LIMIT 1`,
+    ).bind(linkId, today, ipHash).first<{ ok: number }>();
+    const isUnique = seen ? 0 : 1;
+
     await env.DB.prepare(
       `INSERT INTO clicks (id, link_id, timestamp, country, city, region, device_type, browser, os, referer, ip_hash)
        VALUES (?, ?, datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -164,17 +174,11 @@ async function trackClick(linkId: string, request: Request, env: Env): Promise<v
 
     await env.DB.prepare(
       `INSERT INTO daily_stats (id, link_id, date, click_count, unique_visitors)
-       VALUES (?, ?, ?, 1, 1)
+       VALUES (?, ?, ?, 1, ?)
        ON CONFLICT(link_id, date) DO UPDATE SET
          click_count = click_count + 1,
-         unique_visitors = unique_visitors + CASE
-           WHEN NOT EXISTS (
-             SELECT 1 FROM clicks
-             WHERE link_id = ? AND date(timestamp) = ? AND ip_hash = ?
-             LIMIT 1
-           ) THEN 1 ELSE 0
-         END`,
-    ).bind(generateId(), linkId, today, linkId, today, ipHash).run();
+         unique_visitors = unique_visitors + ?`,
+    ).bind(generateId(), linkId, today, isUnique, isUnique).run();
   } catch (error) {
     console.error('Error tracking click:', error);
   }

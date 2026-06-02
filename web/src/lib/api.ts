@@ -140,10 +140,14 @@ export interface CreateGroupPayload {
   description?: string;
   color?: string;
   icon?: string;
+  workspace_id?: string;
 }
 
 export const groups = {
-  list: () => request<LinkGroup[]>('/groups'),
+  list: (workspaceId?: string) => {
+    const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : '';
+    return request<LinkGroup[]>(`/groups${qs}`);
+  },
 
   create: (payload: CreateGroupPayload) =>
     request<LinkGroup>('/groups', {
@@ -173,9 +177,12 @@ export interface Tag {
 }
 
 export const tags = {
-  list: () => request<Tag[]>('/tags'),
+  list: (workspaceId?: string) => {
+    const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : '';
+    return request<Tag[]>(`/tags${qs}`);
+  },
 
-  create: (payload: { name: string; color?: string }) =>
+  create: (payload: { name: string; color?: string; workspace_id?: string }) =>
     request<Tag>('/tags', {
       method: 'POST',
       body: JSON.stringify(payload),
