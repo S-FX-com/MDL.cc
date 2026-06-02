@@ -70,7 +70,28 @@ export default {
       });
     }
 
+    // Host routing. mdl.cc (and dev hosts) serve the full product — dashboard
+    // app, JSON API, and mdl.cc/m{code} short links. Every other hostname is a
+    // branded short-link domain: it must ONLY resolve /{code} redirects and
+    // never expose the dashboard SPA or API. Without this gate the SPA fallback
+    // (below) would happily serve the whole web app on any attached hostname.
+    const host = url.hostname.toLowerCase();
+    const isAppHost =
+      host === 'mdl.cc' ||
+      host === 'www.mdl.cc' ||
+      host.endsWith('.workers.dev') ||
+      host === 'localhost';
+
     try {
+      if (!isAppHost) {
+        if (method === 'GET') {
+          const redirect = await routeRedirect(request, env);
+          if (redirect) return redirect;
+        }
+        // Not a short link on a branded domain — don't leak the app/API here.
+        return new Response('Not Found', { status: 404 });
+      }
+
       // ============ API Routes ============
 
       // Health check + feature flags consumed by the web client (SSO buttons,
