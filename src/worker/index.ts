@@ -82,7 +82,13 @@ export default {
       host.endsWith('.workers.dev') ||
       host === 'localhost';
 
+    // Routing runs inside an awaited inner function so that a rejected handler
+    // promise is caught here and returned as JSON. Returning handler promises
+    // directly (without await) would let rejections escape this try/catch and
+    // surface as Cloudflare's HTML error page — which breaks JSON clients with
+    // "Unexpected token '<', "<!DOCTYPE "... is not valid JSON".
     try {
+      return await (async (): Promise<Response> => {
       if (!isAppHost) {
         if (method === 'GET') {
           const redirect = await routeRedirect(request, env);
@@ -251,6 +257,7 @@ export default {
       }
 
       return errorResponse('Not Found', 404);
+      })();
     } catch (error) {
       console.error('Worker error:', error);
       return errorResponse('Internal Server Error', 500);

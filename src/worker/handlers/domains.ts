@@ -93,48 +93,53 @@ export async function createDomain(request: Request, env: Env): Promise<Response
     return errorResponse('This domain is reserved', 400);
   }
 
-  const dupe = await env.DB.prepare('SELECT id FROM domains WHERE domain = ?')
-    .bind(domain).first<{ id: string }>();
-  if (dupe) return errorResponse('This domain is already registered', 409);
+  try {
+    const dupe = await env.DB.prepare('SELECT id FROM domains WHERE domain = ?')
+      .bind(domain).first<{ id: string }>();
+    if (dupe) return errorResponse('This domain is already registered', 409);
 
-  const existingDefault = await env.DB.prepare(
-    'SELECT id FROM domains WHERE workspace_id = ? AND is_default = 1 LIMIT 1',
-  ).bind(body.workspace_id).first<{ id: string }>();
+    const existingDefault = await env.DB.prepare(
+      'SELECT id FROM domains WHERE workspace_id = ? AND is_default = 1 LIMIT 1',
+    ).bind(body.workspace_id).first<{ id: string }>();
 
-  const id = generateId();
-  const verifyToken = `mdl-verify-${generateId().replace(/-/g, '').slice(0, 24)}`;
-  const now = new Date().toISOString();
+    const id = generateId();
+    const verifyToken = `mdl-verify-${generateId().replace(/-/g, '').slice(0, 24)}`;
+    const now = new Date().toISOString();
 
-  // When Cloudflare for SaaS is configured, register the custom hostname first
-  // so we can store its id + validation records. If CF rejects it (e.g. already
-  // claimed on the zone, or a bad token) we surface the error and add nothing.
-  let cfId: string | null = null;
-  let cfStatus: string | null = null;
-  let cfSslStatus: string | null = null;
-  let cfValidation: string | null = null;
-  if (saasConfigured(env)) {
-    const ch = await createCustomHostname(env, domain);
-    if (!ch.ok) return errorResponse(`Cloudflare could not add this domain: ${ch.error}`, 502);
-    cfId = ch.data.id;
-    cfStatus = ch.data.status;
-    cfSslStatus = ch.data.sslStatus;
-    cfValidation = JSON.stringify({ cname_target: cnameTarget(env), records: ch.data.records });
+    // When Cloudflare for SaaS is configured, register the custom hostname first
+    // so we can store its id + validation records. If CF rejects it (e.g. already
+    // claimed on the zone, or a bad token) we surface the error and add nothing.
+    let cfId: string | null = null;
+    let cfStatus: string | null = null;
+    let cfSslStatus: string | null = null;
+    let cfValidation: string | null = null;
+    if (saasConfigured(env)) {
+      const ch = await createCustomHostname(env, domain);
+      if (!ch.ok) return errorResponse(`Cloudflare could not add this domain: ${ch.error}`, 502);
+      cfId = ch.data.id;
+      cfStatus = ch.data.status;
+      cfSslStatus = ch.data.sslStatus;
+      cfValidation = JSON.stringify({ cname_target: cnameTarget(env), records: ch.data.records });
+    }
+
+    await env.DB.prepare(
+      `INSERT INTO domains (id, workspace_id, domain, verified, is_default, verify_token, created_at,
+                            cf_hostname_id, cf_status, cf_ssl_status, cf_validation)
+       VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(
+      id, body.workspace_id, domain, existingDefault ? 0 : 1, verifyToken, now,
+      cfId, cfStatus, cfSslStatus, cfValidation,
+    ).run();
+
+    const row = await env.DB.prepare('SELECT * FROM domains WHERE id = ?').bind(id).first<DomainRow>();
+    const message = saasConfigured(env)
+      ? 'Domain added. Point it to Cloudflare with the CNAME below, then verify.'
+      : 'Domain added. Configure DNS to verify.';
+    return successResponse(serialize(row!), message);
+  } catch (error) {
+    console.error('Error creating domain:', error);
+    return errorResponse('Failed to add domain. Please try again.', 500);
   }
-
-  await env.DB.prepare(
-    `INSERT INTO domains (id, workspace_id, domain, verified, is_default, verify_token, created_at,
-                          cf_hostname_id, cf_status, cf_ssl_status, cf_validation)
-     VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)`,
-  ).bind(
-    id, body.workspace_id, domain, existingDefault ? 0 : 1, verifyToken, now,
-    cfId, cfStatus, cfSslStatus, cfValidation,
-  ).run();
-
-  const row = await env.DB.prepare('SELECT * FROM domains WHERE id = ?').bind(id).first<DomainRow>();
-  const message = saasConfigured(env)
-    ? 'Domain added. Point it to Cloudflare with the CNAME below, then verify.'
-    : 'Domain added. Configure DNS to verify.';
-  return successResponse(serialize(row!), message);
 }
 
 // ── Verify a domain via TXT record ──────────────────────────────────────────
