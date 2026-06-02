@@ -10,6 +10,7 @@ import { useWorkspace } from '../contexts/WorkspaceContext';
 import { useAuth } from '../contexts/AuthContext';
 import type { TeamMember, CustomDomain } from '../contexts/WorkspaceContext';
 import EmailDomainsCard from '../components/EmailDomainsCard';
+import type { DomainValidationRecord } from '../lib/api';
 import clsx from 'clsx';
 
 type ThemeOption = 'light' | 'dark' | 'system';
@@ -86,16 +87,58 @@ function InlineEdit({
 }
 
 // ── DNS Instructions component ────────────────────────────────────────────────
+function DnsRecordsTable({ records }: { records: DomainValidationRecord[] }) {
+  const typeStyle: Record<string, string> = {
+    CNAME: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+    TXT: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
+  };
+  return (
+    <div className="overflow-x-auto mt-2">
+      <table className="w-full text-xs font-mono">
+        <thead>
+          <tr className="text-neutral-500 dark:text-neutral-400 text-left">
+            <th className="pb-1 pr-4">Type</th>
+            <th className="pb-1 pr-4">Host / Name</th>
+            <th className="pb-1">Value / Target</th>
+          </tr>
+        </thead>
+        <tbody className="text-neutral-900 dark:text-white">
+          {records.map((r, i) => (
+            <tr key={i}>
+              <td className="pr-4 py-1 align-top">
+                <span className={clsx('px-1.5 py-0.5 rounded', typeStyle[r.type.toUpperCase()] ?? 'bg-neutral-200 dark:bg-neutral-700')}>
+                  {r.type.toUpperCase()}
+                </span>
+              </td>
+              <td className="pr-4 py-1 align-top break-all">{r.name}</td>
+              <td className="py-1 align-top text-secondary-600 dark:text-secondary-400 break-all">{r.value}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function DnsInstructions({
   domain,
   verifyToken,
   verifyHost,
+  records,
+  cfStatus,
+  cfSslStatus,
 }: {
   domain: string;
   verifyToken: string;
   verifyHost: string;
+  records: DomainValidationRecord[];
+  cfStatus?: string | null;
+  cfSslStatus?: string | null;
 }) {
   const [open, setOpen] = useState(false);
+  // SaaS mode: Cloudflare returned the records the customer must add (CNAME +
+  // SSL validation). Legacy mode: just the _mdl-verify ownership TXT.
+  const saas = records.length > 0;
   return (
     <div className="mt-3">
       <button
@@ -107,53 +150,43 @@ function DnsInstructions({
       </button>
       {open && (
         <div className="mt-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800 space-y-3 text-sm">
-          {/* Step 1 — connect the hostname to the worker */}
-          <div>
-            <p className="font-medium text-neutral-900 dark:text-white">
-              1. Connect <code className="font-mono">{domain}</code> to MDL
-            </p>
-            <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-1">
-              In Cloudflare, open <strong>Workers &amp; Pages → mdl-cc → Domains &amp; Routes →
-              Add → Custom Domain</strong> and enter <code className="font-mono">{domain}</code>.
-              Cloudflare creates the proxied DNS record and TLS certificate automatically and
-              routes <code className="font-mono">{domain}/&lt;code&gt;</code> to MDL — no manual
-              CNAME needed.
-            </p>
-          </div>
-
-          {/* Step 2 — prove ownership so the worker will serve links */}
-          <div>
-            <p className="font-medium text-neutral-900 dark:text-white">
-              2. Add this TXT record, then click <strong>Verify</strong>
-            </p>
-            <div className="overflow-x-auto mt-2">
-              <table className="w-full text-xs font-mono">
-                <thead>
-                  <tr className="text-neutral-500 dark:text-neutral-400 text-left">
-                    <th className="pb-1 pr-4">Type</th>
-                    <th className="pb-1 pr-4">Host / Name</th>
-                    <th className="pb-1">Value</th>
-                  </tr>
-                </thead>
-                <tbody className="text-neutral-900 dark:text-white">
-                  <tr>
-                    <td className="pr-4 py-1">
-                      <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded">TXT</span>
-                    </td>
-                    <td className="pr-4 py-1">{verifyHost}</td>
-                    <td className="py-1 text-secondary-600 dark:text-secondary-400 break-all">{verifyToken}</td>
-                  </tr>
-                </tbody>
-              </table>
+          {saas ? (
+            <>
+              <div>
+                <p className="font-medium text-neutral-900 dark:text-white">
+                  Add these records at <code className="font-mono">{domain}</code>'s DNS, then click <strong>Verify</strong>
+                </p>
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-1">
+                  The CNAME points your domain at MDL; the TXT record(s) let Cloudflare issue the
+                  TLS certificate. Works for any domain on any Cloudflare account.
+                </p>
+                <DnsRecordsTable records={records} />
+              </div>
+              {(cfStatus || cfSslStatus) && (
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="px-2 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200">
+                    Hostname: <strong>{cfStatus ?? 'pending'}</strong>
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200">
+                    Certificate: <strong>{cfSslStatus ?? 'pending'}</strong>
+                  </span>
+                </div>
+              )}
+            </>
+          ) : (
+            <div>
+              <p className="font-medium text-neutral-900 dark:text-white">
+                Add this TXT record, then click <strong>Verify</strong>
+              </p>
+              <DnsRecordsTable records={[{ type: 'TXT', name: verifyHost, value: verifyToken }]} />
             </div>
-          </div>
+          )}
 
           <div className="flex gap-2 items-start p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
             <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <p className="text-xs text-amber-700 dark:text-amber-300">
-              The domain must be in the same Cloudflare account as MDL. Domains on a different
-              Cloudflare account aren't supported yet. DNS changes can take a few minutes to
-              propagate — click <strong>Verify</strong> once the TXT record is live.
+              DNS changes can take a few minutes to propagate. Click <strong>Verify</strong> once
+              the records are live; the certificate is issued automatically after that.
             </p>
           </div>
           <p className="text-xs text-neutral-500 dark:text-neutral-400">
@@ -925,6 +958,9 @@ export default function Settings() {
                         domain={d.domain}
                         verifyToken={d.verifyToken ?? ''}
                         verifyHost={d.verifyHost ?? `_mdl-verify.${d.domain}`}
+                        records={d.validationRecords ?? []}
+                        cfStatus={d.cfStatus}
+                        cfSslStatus={d.cfSslStatus}
                       />
                     )}
                     {verifyError === d.id && (

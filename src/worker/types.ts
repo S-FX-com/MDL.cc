@@ -16,6 +16,15 @@ export interface Env {
   // M365 sign-in endpoint returns 503 and the UI hides the button.
   MS_CLIENT_ID?: string;
   MS_CLIENT_SECRET?: string;
+  // Cloudflare for SaaS (custom hostnames) for branded workspace domains.
+  // All optional: when CF_API_TOKEN + CF_ZONE_ID are absent the domain flow
+  // falls back to the legacy _mdl-verify TXT check and no CF API calls are made.
+  //   CF_API_TOKEN    — token scoped to SSL and Certificates: Edit on the zone.
+  //   CF_ZONE_ID      — the mdl.cc zone id that has Cloudflare for SaaS enabled.
+  //   CF_CNAME_TARGET — the SaaS target customers CNAME to (default cname.mdl.cc).
+  CF_API_TOKEN?: string;
+  CF_ZONE_ID?: string;
+  CF_CNAME_TARGET?: string;
 }
 
 export interface Workspace {

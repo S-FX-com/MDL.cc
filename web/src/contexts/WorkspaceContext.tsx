@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
-import { domains as domainsApi, Domain as ApiDomain } from '../lib/api';
+import { domains as domainsApi, Domain as ApiDomain, DomainValidationRecord } from '../lib/api';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,6 +43,11 @@ export interface CustomDomain {
   isDefault?: boolean;
   verifyToken?: string | null;
   verifyHost?: string;
+  // Cloudflare for SaaS provisioning state.
+  cfStatus?: string | null;
+  cfSslStatus?: string | null;
+  cnameTarget?: string | null;
+  validationRecords?: DomainValidationRecord[];
 }
 
 function toCustomDomain(d: ApiDomain): CustomDomain {
@@ -55,6 +60,10 @@ function toCustomDomain(d: ApiDomain): CustomDomain {
     isDefault: d.is_default,
     verifyToken: d.verify_token,
     verifyHost: d.verify_host,
+    cfStatus: d.cf_status,
+    cfSslStatus: d.cf_ssl_status,
+    cnameTarget: d.cname_target,
+    validationRecords: d.validation_records ?? [],
   };
 }
 

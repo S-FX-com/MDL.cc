@@ -221,6 +221,12 @@ export const qr = {
 };
 
 // Domains
+export interface DomainValidationRecord {
+  type: string;
+  name: string;
+  value: string;
+}
+
 export interface Domain {
   id: string;
   workspace_id: string;
@@ -231,6 +237,11 @@ export interface Domain {
   verify_host: string;
   created_at: string;
   verified_at: string | null;
+  // Cloudflare for SaaS status (null/empty when SaaS isn't configured).
+  cf_status: string | null;
+  cf_ssl_status: string | null;
+  cname_target: string | null;
+  validation_records: DomainValidationRecord[];
 }
 
 export const domains = {
