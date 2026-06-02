@@ -96,7 +96,6 @@ function DnsInstructions({
   verifyHost: string;
 }) {
   const [open, setOpen] = useState(false);
-  const hostLabel = domain.split('.').length > 2 ? domain.split('.').slice(0, -2).join('.') : '@';
   return (
     <div className="mt-3">
       <button
@@ -108,64 +107,53 @@ function DnsInstructions({
       </button>
       {open && (
         <div className="mt-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800 space-y-3 text-sm">
-          <p className="font-medium text-neutral-900 dark:text-white">
-            Add the following DNS records at your domain registrar:
-          </p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs font-mono">
-              <thead>
-                <tr className="text-neutral-500 dark:text-neutral-400 text-left">
-                  <th className="pb-1 pr-4">Type</th>
-                  <th className="pb-1 pr-4">Host / Name</th>
-                  <th className="pb-1">Value / Target</th>
-                </tr>
-              </thead>
-              <tbody className="text-neutral-900 dark:text-white">
-                <tr>
-                  <td className="pr-4 py-1">
-                    <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">CNAME</span>
-                  </td>
-                  <td className="pr-4 py-1">{hostLabel}</td>
-                  <td className="py-1 text-secondary-600 dark:text-secondary-400">cname.mdl.cc</td>
-                </tr>
-                <tr>
-                  <td className="pr-4 py-1">
-                    <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded">TXT</span>
-                  </td>
-                  <td className="pr-4 py-1">{verifyHost}</td>
-                  <td className="py-1 text-secondary-600 dark:text-secondary-400 break-all">{verifyToken}</td>
-                </tr>
-              </tbody>
-            </table>
+          {/* Step 1 — connect the hostname to the worker */}
+          <div>
+            <p className="font-medium text-neutral-900 dark:text-white">
+              1. Connect <code className="font-mono">{domain}</code> to MDL
+            </p>
+            <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-1">
+              In Cloudflare, open <strong>Workers &amp; Pages → mdl-cc → Domains &amp; Routes →
+              Add → Custom Domain</strong> and enter <code className="font-mono">{domain}</code>.
+              Cloudflare creates the proxied DNS record and TLS certificate automatically and
+              routes <code className="font-mono">{domain}/&lt;code&gt;</code> to MDL — no manual
+              CNAME needed.
+            </p>
           </div>
 
-          <div className="flex gap-2 items-start p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-            <div className="text-xs text-red-700 dark:text-red-300 space-y-1.5">
-              <p className="font-semibold">Is your domain already on Cloudflare?</p>
-              <p>
-                A plain CNAME to <code className="font-mono">cname.mdl.cc</code> will fail with{' '}
-                <strong>Error 1014 — CNAME Cross-User Banned</strong>, because Cloudflare blocks
-                CNAMEs that cross accounts. Do one of the following:
-              </p>
-              <ul className="list-disc pl-4 space-y-0.5">
-                <li>
-                  Set the CNAME record to <strong>DNS only</strong> (grey cloud, proxy disabled)
-                  in your Cloudflare dashboard, <em>or</em>
-                </li>
-                <li>
-                  Contact support so we can pre-authorize your hostname via Cloudflare SSL for
-                  SaaS — keep the <code className="font-mono">_mdl-verify</code> TXT record in
-                  place so we can validate ownership.
-                </li>
-              </ul>
+          {/* Step 2 — prove ownership so the worker will serve links */}
+          <div>
+            <p className="font-medium text-neutral-900 dark:text-white">
+              2. Add this TXT record, then click <strong>Verify</strong>
+            </p>
+            <div className="overflow-x-auto mt-2">
+              <table className="w-full text-xs font-mono">
+                <thead>
+                  <tr className="text-neutral-500 dark:text-neutral-400 text-left">
+                    <th className="pb-1 pr-4">Type</th>
+                    <th className="pb-1 pr-4">Host / Name</th>
+                    <th className="pb-1">Value</th>
+                  </tr>
+                </thead>
+                <tbody className="text-neutral-900 dark:text-white">
+                  <tr>
+                    <td className="pr-4 py-1">
+                      <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded">TXT</span>
+                    </td>
+                    <td className="pr-4 py-1">{verifyHost}</td>
+                    <td className="py-1 text-secondary-600 dark:text-secondary-400 break-all">{verifyToken}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
           <div className="flex gap-2 items-start p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
             <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <p className="text-xs text-amber-700 dark:text-amber-300">
-              DNS changes can take up to 48 hours to propagate globally. Click <strong>Verify</strong> once you've added both records.
+              The domain must be in the same Cloudflare account as MDL. Domains on a different
+              Cloudflare account aren't supported yet. DNS changes can take a few minutes to
+              propagate — click <strong>Verify</strong> once the TXT record is live.
             </p>
           </div>
           <p className="text-xs text-neutral-500 dark:text-neutral-400">
