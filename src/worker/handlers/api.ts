@@ -30,6 +30,41 @@ async function isMember(env: Env, userId: string, workspaceId: string | null): P
   return !!row;
 }
 
+// ── Short-URL host resolution ─────────────────────────────────────────────────
+//
+// The DB stays uniform: links keep their short_code and we don't force a
+// domain_id on them. The branded host is applied only when we SERVE the link.
+//
+// Precedence for the host shown to the user:
+//   1. The link's own branded domain (domain_host) — set explicitly at create
+//      time, so honour it.
+//   2. The workspace's default verified custom domain — so every link in a
+//      workspace that has a branded domain surfaces as go.example.com/{code}
+//      instead of mdl.cc/m{code}, without rewriting stored rows.
+//   3. mdl.cc/m{code} — the shared fallback (note the "m" prefix that keeps
+//      app routes safe on the apex; branded hosts are dedicated so they don't
+//      need it).
+//
+// getDefaultDomainHost is the per-workspace lookup; resolve it ONCE per request
+// (a list returns many links from a single workspace) and pass it to buildShortUrl.
+
+async function getDefaultDomainHost(env: Env, workspaceId: string | null): Promise<string | null> {
+  if (!workspaceId) return null;
+  const row = await env.DB.prepare(
+    'SELECT domain FROM domains WHERE workspace_id = ? AND is_default = 1 AND verified = 1 LIMIT 1',
+  ).bind(workspaceId).first<{ domain: string }>();
+  return row?.domain ?? null;
+}
+
+function buildShortUrl(
+  shortCode: string,
+  linkDomainHost: string | null,
+  workspaceDefaultHost: string | null,
+): string {
+  const host = linkDomainHost ?? workspaceDefaultHost;
+  return host ? `https://${host}/${shortCode}` : `https://mdl.cc/m${shortCode}`;
+}
+
 // ============ LINKS ============
 
 export async function createLink(request: Request, env: Env): Promise<Response> {
@@ -148,9 +183,10 @@ export async function createLink(request: Request, env: Env): Promise<Response> 
 
     const link = await env.DB.prepare('SELECT * FROM links WHERE id = ?').bind(id).first<Link>();
 
-    const short_url = brandedHost
-      ? `https://${brandedHost}/${shortCode}`
-      : `https://mdl.cc/m${shortCode}`;
+    // brandedHost is set only when the caller picked a domain explicitly; fall
+    // back to the workspace default so a new link still surfaces as branded.
+    const workspaceDefaultHost = await getDefaultDomainHost(env, body.workspace_id);
+    const short_url = buildShortUrl(shortCode, brandedHost, workspaceDefaultHost);
 
     return successResponse({ ...link, short_url }, 'Link created successfully');
   } catch (error) {
@@ -207,9 +243,11 @@ export async function getLinks(request: Request, env: Env): Promise<Response> {
     const links = await env.DB.prepare(query).bind(...params).all<
       Link & { click_count: number; group_name: string | null; group_color: string | null; domain_host: string | null }
     >();
+    // One lookup for the whole list — every row belongs to the same workspace.
+    const workspaceDefaultHost = await getDefaultDomainHost(env, workspaceId);
     const decorated = links.results.map(l => ({
       ...l,
-      short_url: l.domain_host ? `https://${l.domain_host}/${l.short_code}` : `https://mdl.cc/m${l.short_code}`,
+      short_url: buildShortUrl(l.short_code, l.domain_host, workspaceDefaultHost),
     }));
 
     // Count uses the same scoping rules as the list query.
@@ -277,9 +315,8 @@ export async function getLink(linkId: string, request: Request, env: Env): Promi
       .bind(linkId)
       .all<Tag>();
 
-    const short_url = link.domain_host
-      ? `https://${link.domain_host}/${link.short_code}`
-      : `https://mdl.cc/m${link.short_code}`;
+    const workspaceDefaultHost = await getDefaultDomainHost(env, link.workspace_id);
+    const short_url = buildShortUrl(link.short_code, link.domain_host, workspaceDefaultHost);
 
     return successResponse({
       ...link,
