@@ -245,8 +245,17 @@ export default {
         if (redirect) return redirect;
       }
 
-      // SPA fallback - serve real index.html for client-side routing
+      // Static assets + SPA fallback.
+      //
+      // With experimental_serve_directly = false, every request runs the Worker
+      // first (so the isAppHost gate above can block branded domains). That means
+      // asset requests — /assets/app.js, /favicon.ico, etc. — now reach here too,
+      // and we must serve the REAL file, not index.html. Ask the ASSETS binding
+      // for the requested path; only fall back to index.html (client-side routing)
+      // when the asset doesn't exist (a 404 from the binding).
       if (method === 'GET' && !path.startsWith('/api/')) {
+        const asset = await env.ASSETS.fetch(request);
+        if (asset.status !== 404) return asset;
         return env.ASSETS.fetch(new Request(new URL('/index.html', request.url).toString()));
       }
 

@@ -41,10 +41,16 @@ ENVIRONMENT = "development"
 # pattern = "mdl.cc/*"
 # zone_name = "mdl.cc"
 
-# Static assets for the web app
+# Static assets for the web app.
+# experimental_serve_directly = false makes EVERY request invoke the Worker
+# before any asset is served. This is what lets the host gate in src/worker/index.ts
+# block the dashboard/SPA on branded custom domains — without it, Cloudflare serves
+# index.html directly on tudominio.com/ and the Worker never runs. (wrangler 3.x
+# spelling; on wrangler 4.x this option is `run_worker_first = true`.)
 [assets]
 binding = "ASSETS"
 directory = "./web/dist"
+experimental_serve_directly = false
 
 # Build configuration
 [build]
