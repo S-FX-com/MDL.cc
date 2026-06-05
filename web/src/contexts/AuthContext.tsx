@@ -7,6 +7,8 @@ export interface AuthUser {
   email: string;
   name: string | null;
   avatar_url?: string | null;
+  // Platform-level operator flag. Set from /api/auth/me; gates the admin UI.
+  is_superadmin?: boolean;
 }
 
 interface AuthContextType {
@@ -92,6 +94,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(TOKEN_KEY, data.data.token);
     setToken(data.data.token);
     setUser(data.data.user);
+    // The login response doesn't include the platform-superadmin flag; pull the
+    // canonical record from /me so the admin UI appears without a reload.
+    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${data.data.token}` } })
+      .then(r => r.json())
+      .then((me: { success: boolean; data?: AuthUser }) => {
+        if (me.success && me.data) setUser(me.data);
+      })
+      .catch(() => {});
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string, workspaceSlug?: string) => {

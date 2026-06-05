@@ -267,6 +267,112 @@ export const domains = {
     request<null>(`/domains/${id}`, { method: 'DELETE' }),
 };
 
+// ── Superadmin (platform-wide) ─────────────────────────────────────────────
+// Every endpoint here is gated server-side on the platform-superadmin check and
+// operates across all workspaces.
+
+export interface AdminOverview {
+  totals: {
+    workspaces: number;
+    users: number;
+    links: number;
+    domains: number;
+    clicks: number;
+    superadmins: number;
+  };
+  recent_workspaces: Array<{
+    id: string; name: string; slug: string; created_at: string;
+    owner_email: string | null; member_count: number; link_count: number;
+  }>;
+}
+
+export interface AdminWorkspace {
+  id: string;
+  name: string;
+  slug: string;
+  owner_id: string;
+  owner_email: string | null;
+  owner_name: string | null;
+  member_count: number;
+  link_count: number;
+  domain_count: number;
+  click_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminWorkspaceMember {
+  id: string;
+  role: 'owner' | 'admin' | 'member';
+  joined_at: string;
+  user_id: string;
+  email: string;
+  name: string | null;
+  avatar_url: string | null;
+}
+
+export interface AdminWorkspaceDetail {
+  workspace: AdminWorkspace & { owner_email: string | null; owner_name: string | null };
+  members: AdminWorkspaceMember[];
+  domains: Array<{
+    id: string; domain: string; verified: number; is_default: number;
+    cf_status: string | null; cf_ssl_status: string | null; created_at: string; verified_at: string | null;
+  }>;
+  email_domains: Array<{ id: string; domain: string; auto_join_mode: string; created_at: string }>;
+  counts: { link_count: number; group_count: number; click_count: number };
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  name: string | null;
+  avatar_url: string | null;
+  is_superadmin: number;
+  has_microsoft: number;
+  workspace_count: number;
+  created_at: string;
+}
+
+export const admin = {
+  overview: () => request<AdminOverview>('/admin/overview'),
+
+  listWorkspaces: (search?: string) => {
+    const qs = search ? `?search=${encodeURIComponent(search)}` : '';
+    return request<AdminWorkspace[]>(`/admin/workspaces${qs}`);
+  },
+
+  getWorkspace: (id: string) => request<AdminWorkspaceDetail>(`/admin/workspaces/${id}`),
+
+  updateWorkspace: (id: string, payload: { name?: string; owner_id?: string }) =>
+    request<AdminWorkspace>(`/admin/workspaces/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+
+  deleteWorkspace: (id: string) =>
+    request<null>(`/admin/workspaces/${id}`, { method: 'DELETE' }),
+
+  addMember: (wsId: string, payload: { email: string; role?: 'member' | 'admin' }) =>
+    request<AdminWorkspaceMember>(`/admin/workspaces/${wsId}/members`, {
+      method: 'POST', body: JSON.stringify(payload),
+    }),
+
+  updateMemberRole: (wsId: string, memberId: string, role: 'member' | 'admin') =>
+    request<{ role: string }>(`/admin/workspaces/${wsId}/members/${memberId}`, {
+      method: 'PATCH', body: JSON.stringify({ role }),
+    }),
+
+  removeMember: (wsId: string, memberId: string) =>
+    request<null>(`/admin/workspaces/${wsId}/members/${memberId}`, { method: 'DELETE' }),
+
+  listUsers: (search?: string) => {
+    const qs = search ? `?search=${encodeURIComponent(search)}` : '';
+    return request<AdminUser[]>(`/admin/users${qs}`);
+  },
+
+  setSuperadmin: (id: string, isSuperadmin: boolean) =>
+    request<{ id: string; is_superadmin: boolean }>(`/admin/users/${id}`, {
+      method: 'PATCH', body: JSON.stringify({ is_superadmin: isSuperadmin }),
+    }),
+};
+
 // Canonical short URL helpers. Always prefer the server-supplied short_url
 // (which accounts for branded domains), fall back to mdl.cc/m{code}.
 export function shortLinkHref(link: Pick<Link, 'short_url' | 'short_code'>): string {

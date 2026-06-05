@@ -23,6 +23,7 @@ A fast, modern URL shortening service built on Cloudflare's global edge network.
 - **Password-protected links** — Gate sensitive URLs behind a password
 - **Link expiration** — Auto-expire links on a schedule
 - **Branded domains** — Bring your own hostname; verified per-workspace
+- **Platform superadmin** — A platform-level operator oversees and configures *every* workspace, member, and domain from a single admin backend
 - **Light & dark mode** — Adaptive UI
 
 ## Tech stack
@@ -81,6 +82,7 @@ MDL.cc/
 │   │   ├── microsoft.ts              # OAuth2 + PKCE sign-in
 │   │   ├── email.ts                  # Invitation send / validate / accept (Resend)
 │   │   ├── workspaces.ts             # Workspace CRUD & membership
+│   │   ├── admin.ts                  # Superadmin: oversee/configure all workspaces
 │   │   ├── workspaceDomains.ts       # Email-domain claims & auto-join
 │   │   ├── domains.ts                # Branded custom domains
 │   │   ├── preview.ts                # Open Graph link previews
@@ -99,6 +101,7 @@ MDL.cc/
 │       │   ├── Join.tsx              # Invite acceptance
 │       │   ├── Dashboard.tsx, Links.tsx, LinkDetail.tsx,
 │       │   ├── Groups.tsx, Analytics.tsx, Invitations.tsx, Settings.tsx
+│       │   ├── Admin.tsx              # Platform admin (superadmin only)
 │       ├── components/  (Layout, CreateLinkModal, EmailDomainsCard, QRCodeDisplay)
 │       ├── contexts/    (AuthContext, ThemeContext, WorkspaceContext)
 │       └── lib/         (api, features)
@@ -149,6 +152,7 @@ MDL.cc/
    ```bash
    wrangler d1 execute mdl-db --file=./migrations/0005_invitations.sql
    wrangler d1 execute mdl-db --file=./migrations/0006_groups_tags_workspace_scope.sql
+   wrangler d1 execute mdl-db --file=./migrations/0007_superadmin.sql
    ```
    > The numbered files (`0001…`) are the incremental history. Do **not** replay
    > `0002` against a live database — it rebuilds the `domains` table and deletes
@@ -158,6 +162,7 @@ MDL.cc/
    - `PBKDF2_SALT_PREFIX` — server-side salt prefix for password hashing
    - `RESEND_API_KEY` — required for invitation emails
    - `MS_CLIENT_ID`, `MS_CLIENT_SECRET` — required for Microsoft sign-in
+   - `SUPERADMIN_EMAILS` (a `[vars]` entry in `wrangler.toml`, not a secret) — comma-separated allowlist that bootstraps the first platform superadmin (see below)
 4. Deploy:
    ```bash
    npm run deploy
@@ -217,6 +222,38 @@ POST   /api/workspaces
 GET    /api/workspaces/:id/invitations
 GET    /api/workspaces/:id/email-domains
 POST   /api/workspaces/:id/email-domains   { domain, auto_join_mode }
+```
+
+### Superadmin (platform-wide)
+
+A **superadmin** is a platform-level operator — distinct from the per-workspace
+`owner`/`admin`/`member` roles. They oversee and configure **every** workspace
+on the instance. The `/api/admin/*` endpoints are the only API surface that
+deliberately bypasses workspace-membership scoping, so each one re-checks the
+superadmin status server-side; the web route and the sidebar entry are just UX
+guards on top of that.
+
+**Who is a superadmin?** Either source grants it:
+1. The user's email is in the `SUPERADMIN_EMAILS` allowlist (bootstrap — the
+   first operator is never locked out, even on a fresh database), or
+2. Their `users.is_superadmin` flag is set (granted by another superadmin from
+   the **Platform Admin → Users** tab).
+
+`GET /api/auth/me` returns an `is_superadmin` boolean so the web app can reveal
+the **Platform Admin** sidebar entry and `/admin` page (Overview · Workspaces ·
+Users).
+
+```http
+GET    /api/admin/overview                              # platform totals + recent workspaces
+GET    /api/admin/workspaces?search=…                   # every workspace + owner & counts
+GET    /api/admin/workspaces/:id                        # members, domains, counts
+PUT    /api/admin/workspaces/:id        { name?, owner_id? }   # rename / transfer ownership
+DELETE /api/admin/workspaces/:id                        # delete a workspace + all its data
+POST   /api/admin/workspaces/:id/members         { email, role? }
+PATCH  /api/admin/workspaces/:id/members/:memberId { role }
+DELETE /api/admin/workspaces/:id/members/:memberId
+GET    /api/admin/users?search=…                        # every user + workspace count
+PATCH  /api/admin/users/:id              { is_superadmin }     # grant / revoke superadmin
 ```
 
 ## Speed optimisations

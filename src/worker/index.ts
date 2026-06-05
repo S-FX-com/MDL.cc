@@ -46,6 +46,18 @@ import {
   updateWorkspaceDomain,
   removeWorkspaceDomain,
 } from './handlers/workspaceDomains';
+import {
+  getPlatformOverview,
+  listAllWorkspaces,
+  getWorkspaceDetailAdmin,
+  updateWorkspaceAdmin,
+  deleteWorkspaceAdmin,
+  addWorkspaceMemberAdmin,
+  updateMemberRoleAdmin,
+  removeWorkspaceMemberAdmin,
+  listAllUsers,
+  updateUserAdmin,
+} from './handlers/admin';
 import { errorResponse, jsonResponse } from './utils';
 
 export default {
@@ -234,6 +246,37 @@ export default {
       const domainMatch = path.match(/^\/api\/domains\/([^/]+)$/);
       if (domainMatch && method === 'DELETE') {
         return deleteDomain(domainMatch[1], request, env);
+      }
+
+      // ============ Superadmin (platform-wide) ============
+      //
+      // Every /api/admin/* handler enforces getSuperadmin() and then operates
+      // across workspaces — this is the only API surface that bypasses the
+      // per-workspace membership scoping. Routes are matched before the SPA
+      // fallback so they never leak into static asset serving.
+      if (path === '/api/admin/overview'   && method === 'GET') return getPlatformOverview(request, env);
+      if (path === '/api/admin/workspaces' && method === 'GET') return listAllWorkspaces(request, env);
+
+      const adminWsMembersMatch = path.match(/^\/api\/admin\/workspaces\/([^/]+)\/members$/);
+      if (adminWsMembersMatch && method === 'POST') {
+        return addWorkspaceMemberAdmin(adminWsMembersMatch[1], request, env);
+      }
+      const adminWsMemberMatch = path.match(/^\/api\/admin\/workspaces\/([^/]+)\/members\/([^/]+)$/);
+      if (adminWsMemberMatch) {
+        if (method === 'PATCH')  return updateMemberRoleAdmin(adminWsMemberMatch[1], adminWsMemberMatch[2], request, env);
+        if (method === 'DELETE') return removeWorkspaceMemberAdmin(adminWsMemberMatch[1], adminWsMemberMatch[2], request, env);
+      }
+      const adminWsMatch = path.match(/^\/api\/admin\/workspaces\/([^/]+)$/);
+      if (adminWsMatch) {
+        if (method === 'GET')    return getWorkspaceDetailAdmin(adminWsMatch[1], request, env);
+        if (method === 'PUT')    return updateWorkspaceAdmin(adminWsMatch[1], request, env);
+        if (method === 'DELETE') return deleteWorkspaceAdmin(adminWsMatch[1], request, env);
+      }
+
+      if (path === '/api/admin/users' && method === 'GET') return listAllUsers(request, env);
+      const adminUserMatch = path.match(/^\/api\/admin\/users\/([^/]+)$/);
+      if (adminUserMatch && method === 'PATCH') {
+        return updateUserAdmin(adminUserMatch[1], request, env);
       }
 
       // ============ URL Redirect ============

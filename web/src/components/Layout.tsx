@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Check,
   LogOut,
+  Shield,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -36,6 +37,12 @@ export default function Layout() {
   const { activeWorkspace, workspaces, setActiveWorkspaceId } = useWorkspace();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  // Platform Admin is appended only for superadmins; the route and API enforce
+  // the same check, so a non-superadmin can never reach it even by URL.
+  const navItems = user?.is_superadmin
+    ? [...navigation, { name: 'Platform Admin', href: '/admin', icon: Shield }]
+    : navigation;
   const [sidebarOpen, setSidebarOpen]   = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [topBarUrl, setTopBarUrl]       = useState('');
@@ -222,7 +229,7 @@ export default function Layout() {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-1 space-y-0.5 overflow-y-auto">
-          {navigation.map((item) => (
+          {navItems.map((item) => (
             <NavLink
               key={item.name}
               to={item.href}

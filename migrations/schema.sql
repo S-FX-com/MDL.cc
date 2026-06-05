@@ -19,6 +19,9 @@ CREATE TABLE IF NOT EXISTS users (
     password_salt TEXT,
     microsoft_id TEXT,
     email_verified INTEGER NOT NULL DEFAULT 0,
+    -- Platform-level operator flag (not a workspace role). A superadmin can
+    -- oversee and configure every workspace via the /api/admin/* endpoints.
+    is_superadmin INTEGER NOT NULL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -26,6 +29,8 @@ CREATE TABLE IF NOT EXISTS users (
 -- One Microsoft account links to at most one user.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_microsoft_id
   ON users(microsoft_id) WHERE microsoft_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_users_is_superadmin ON users(is_superadmin) WHERE is_superadmin = 1;
 
 -- Workspaces
 CREATE TABLE IF NOT EXISTS workspaces (

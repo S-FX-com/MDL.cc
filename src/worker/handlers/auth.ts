@@ -4,6 +4,7 @@ import { Env } from '../types';
 import { generateId, successResponse, errorResponse } from '../utils';
 import { hashPassword, verifyPassword } from '../lib/password';
 import { signJWT, verifyJWT } from '../lib/jwt';
+import { isSuperadminUser } from '../middleware/auth';
 
 interface RegisterBody {
   email: string;
@@ -111,10 +112,15 @@ export async function getMe(request: Request, env: Env): Promise<Response> {
 
   const user = await env.DB.prepare(
     `SELECT id, email, name, avatar_url, created_at FROM users WHERE id = ?`
-  ).bind(payload.userId as string).first();
+  ).bind(payload.userId as string).first<{ id: string; email: string }>();
 
   if (!user) return errorResponse('User not found', 404);
-  return successResponse(user);
+
+  // Surface the platform-superadmin flag so the web app can reveal the admin
+  // backend. Computed (not just the column) so the SUPERADMIN_EMAILS bootstrap
+  // allowlist counts too.
+  const is_superadmin = await isSuperadminUser(env, user.id, user.email);
+  return successResponse({ ...user, is_superadmin });
 }
 
 export async function updateProfile(request: Request, env: Env): Promise<Response> {

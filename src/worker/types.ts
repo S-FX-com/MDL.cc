@@ -10,6 +10,11 @@ export interface Env {
   RESEND_API_KEY: string;
   JWT_SECRET: string;
   PBKDF2_SALT_PREFIX: string;
+  // Bootstrap allowlist for platform superadmins (comma-separated emails).
+  // Any signed-in user whose email matches is treated as a superadmin even if
+  // their users.is_superadmin flag is 0 — this lets the first operator sign in
+  // and promote others from the admin UI without a manual DB edit.
+  SUPERADMIN_EMAILS?: string;
   // Public origin for callback URLs (e.g. https://mdl.cc). Optional in dev.
   APP_URL?: string;
   // Microsoft 365 OAuth (Azure App Registration). Optional — if absent, the

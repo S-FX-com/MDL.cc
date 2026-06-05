@@ -6,6 +6,7 @@ import LinkDetail from './pages/LinkDetail';
 import Groups from './pages/Groups';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
+import Admin from './pages/Admin';
 import Invitations from './pages/Invitations';
 import Login from './pages/Login';
 import WorkspaceEntry from './pages/WorkspaceEntry';
@@ -42,6 +43,15 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Platform-superadmin gate. Non-superadmins are bounced to the dashboard rather
+// than shown a broken page. The server enforces the same check on every
+// /api/admin/* call, so this is a UX guard, not the security boundary.
+function SuperadminRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (!user?.is_superadmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 function App() {
   return (
     <Routes>
@@ -61,6 +71,7 @@ function App() {
         <Route path="analytics" element={<Analytics />} />
         <Route path="invitations" element={<Invitations />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="admin" element={<SuperadminRoute><Admin /></SuperadminRoute>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
